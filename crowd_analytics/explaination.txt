@@ -1,0 +1,78 @@
+```
+
+# Install Requirements
+
+```bash
+pip install ultralytics
+pip install opencv-python
+pip install deep-sort-realtime
+```
+
+# Metrics Explained
+
+## 1. Density
+
+Formula:
+
+```text
+Density = Total People / Area(m²)
+```
+
+Unit:
+
+```text
+people per square meter (p/m²)
+```
+
+---
+
+## 2. Average Speed
+
+Formula:
+
+```text
+Speed = Distance / Time
+```
+
+Unit:
+
+```text
+meters per second (m/s)
+```
+
+---
+
+## 3. Inflow
+
+People entering the region per minute.
+
+Unit:
+
+```text
+people/min
+```
+
+---
+
+## 4. Outflow
+
+People leaving the region per minute.
+
+Unit:
+
+```text
+people/min
+```
+
+# IMPORTANT
+
+You MUST adjust:
+
+```python
+REAL_WORLD_WIDTH_METERS
+REAL_WORLD_HEIGHT_METERS
+```
+
+according to your actual camera scene.
+
+Otherwise the density and speed values will not represent real-world measurements accurately.
