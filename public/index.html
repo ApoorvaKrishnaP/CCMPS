@@ -681,13 +681,43 @@ let refreshInterval;
 
 // ─── PIPELINE UI STATE ──────────────────────────────
 let selectedVideoFile = null;
+let uploadedVideoEl = null; // hidden HTMLVideoElement used to render frames into canvas
+let heatmapAnimating = false;
 
 function onVideoSelect(input) {
   selectedVideoFile = input.files[0];
   if (selectedVideoFile) {
     document.getElementById('video-filename').textContent = selectedVideoFile.name;
     document.getElementById('start-pipeline-btn').disabled = false;
+    try {
+      // cleanup previous video element
+      if (uploadedVideoEl) {
+        try { uploadedVideoEl.pause(); } catch (_) {}
+        try { URL.revokeObjectURL(uploadedVideoEl.src); } catch (_) {}
+        uploadedVideoEl = null;
+      }
+      uploadedVideoEl = document.createElement('video');
+      uploadedVideoEl.src = URL.createObjectURL(selectedVideoFile);
+      uploadedVideoEl.muted = true;
+      uploadedVideoEl.loop = true;
+      uploadedVideoEl.playsInline = true;
+      uploadedVideoEl.autoplay = true;
+      // start playback (may be blocked until user interacts in some browsers)
+      uploadedVideoEl.play().catch(() => {});
+      startHeatmapAnimation();
+    } catch (e) { console.warn('video init failed', e); }
+  } else {
+    document.getElementById('video-filename').textContent = 'No file selected';
   }
+}
+
+function startHeatmapAnimation() {
+  if (heatmapAnimating) return;
+  heatmapAnimating = true;
+  (function loop() {
+    try { drawHeatmap(currentZones); } catch (e) { console.warn(e); }
+    if (heatmapAnimating) requestAnimationFrame(loop);
+  })();
 }
 
 // ─── CLOCK ─────────────────────────────────────
@@ -846,27 +876,48 @@ function drawHeatmap(zones) {
     ctx.beginPath();
     ctx.rect(cellX, cellY, cellW, cellH);
     ctx.clip();
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle = grad;
-    ctx.fill();
+    // If a video is uploaded and this zone is selected, render the video as the cell background
+    const selZone = document.getElementById('upload-zone-select') ? document.getElementById('upload-zone-select').value : null;
+    const isVideoZone = uploadedVideoEl && selZone === z.name && uploadedVideoEl.readyState >= 2;
+    if (isVideoZone) {
+      try {
+        const vw = uploadedVideoEl.videoWidth || 1;
+        const vh = uploadedVideoEl.videoHeight || 1;
+        // object-fit: cover -> scale to cover the cell, cropping overflow
+        const scale = Math.max(cellW / vw, cellH / vh);
+        const dw = vw * scale;
+        const dh = vh * scale;
+        const imgX = cellX + (cellW - dw) / 2;
+        const imgY = cellY + (cellH - dh) / 2;
+        ctx.drawImage(uploadedVideoEl, imgX, imgY, dw, dh);
+      } catch (e) { console.warn('video draw failed', e); }
+      // don't draw bubble/glow for this zone; label will still be drawn below
+    } else {
+      // draw bubble as before
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
 
-    const arrowMap = { North: [0,-1], South: [0,1], East: [1,0], West: [-1,0], Mixed: [0.5,0.5] };
-    const [dx, dy] = arrowMap[z.flow_direction] || [0,0];
-    const al = 20;
-    ctx.strokeStyle = 'rgba(200,230,245,0.8)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(cx - dx*al/2, cy - dy*al/2);
-    ctx.lineTo(cx + dx*al/2, cy + dy*al/2);
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(200,230,245,0.8)';
-    ctx.beginPath();
-    ctx.moveTo(cx + dx*al/2, cy + dy*al/2);
-    ctx.lineTo(cx + dx*al/2 - dy*5 - dx*8, cy + dy*al/2 + dx*5 - dy*8);
-    ctx.lineTo(cx + dx*al/2 + dy*5 - dx*8, cy + dy*al/2 - dx*5 - dy*8);
-    ctx.closePath();
-    ctx.fill();
+      const arrowMap = { North: [0,-1], South: [0,1], East: [1,0], West: [-1,0], Mixed: [0.5,0.5] };
+      const [dx, dy] = arrowMap[z.flow_direction] || [0,0];
+      const al = 20;
+      ctx.strokeStyle = 'rgba(200,230,245,0.8)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - dx*al/2, cy - dy*al/2);
+      ctx.lineTo(cx + dx*al/2, cy + dy*al/2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(200,230,245,0.8)';
+      ctx.beginPath();
+      ctx.moveTo(cx + dx*al/2, cy + dy*al/2);
+      ctx.lineTo(cx + dx*al/2 - dy*5 - dx*8, cy + dy*al/2 + dx*5 - dy*8);
+      ctx.lineTo(cx + dx*al/2 + dy*5 - dx*8, cy + dy*al/2 - dx*5 - dy*8);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Zone label (always visible)
     ctx.font = 'bold 11px Rajdhani,sans-serif';
     ctx.fillStyle = '#e8f8ff';
     ctx.textAlign = 'center';
