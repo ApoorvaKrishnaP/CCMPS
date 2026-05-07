@@ -8,7 +8,7 @@ from PyQt5.QtCore import QTimer
 
 # ---------------- CONFIG ----------------
 MODEL_PATH = "yolov8n.pt"
-VIDEO_PATH = "dense_4.mp4"
+VIDEO_PATH = "crowd_vid.mp4"
 
 CONF = 0.10
 IOU = 0.5

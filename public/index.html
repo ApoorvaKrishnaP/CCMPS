@@ -361,6 +361,54 @@ body::before {
 /* Live row highlight in zone table */
 .zone-table tr.live-row td { background: rgba(0,212,255,0.06) !important; }
 .zone-table tr.live-row td:first-child { border-left: 2px solid var(--accent); }
+
+/* ── VID-TWIN LIVE ANALYTICS ─────────────────────────────────────────────── */
+.vt-upload-row {
+  display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
+  padding: 16px 18px; border-bottom: 1px solid var(--border);
+  background: rgba(0,212,255,0.02);
+}
+.vt-streams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 14px;
+}
+.vt-stream-card {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 8px; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.vt-stream-card.full-width { grid-column: 1 / -1; }
+.vt-stream-title {
+  font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim);
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 8px 12px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+}
+.vt-stream-title-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.5s infinite; }
+.vt-img {
+  width: 100%; display: block;
+  background: #030a12;
+  min-height: 220px;
+  object-fit: contain;
+}
+.vt-stream-card.full-width .vt-img { min-height: 300px; }
+.vt-placeholder {
+  width: 100%; min-height: 220px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 1px;
+}
+.vt-stream-card.full-width .vt-placeholder { min-height: 300px; }
+.vt-placeholder-icon { font-size: 2.5rem; opacity: 0.4; }
+.vt-stats-strip {
+  display: flex; gap: 20px; flex-wrap: wrap;
+  padding: 10px 14px;
+  background: rgba(0,212,255,0.03); border-top: 1px solid var(--border);
+}
 </style>
 </head>
 <body>
@@ -614,6 +662,66 @@ body::before {
         <div class="panel-header"><div class="panel-title"><div class="panel-title-dot" style="background:var(--yellow)"></div>Scenario Recommendations</div></div>
         <div class="panel-body" id="sim-recommendations">
           <div style="color:var(--text-dim);font-family:var(--font-mono);font-size:0.8rem;text-align:center;padding:30px 0">Run a simulation to generate recommendations</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VID-TWIN LIVE ANALYTICS SUBSECTION ─────────────────────────────── -->
+    <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
+      <div class="section-title" style="margin-bottom:12px">Live Analytics — Uploaded Video</div>
+
+      <div class="panel" id="vt-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-title-dot" style="background:var(--accent);animation:pulse 1.5s infinite"></div>
+            Detection + Digital Twin — Video Feed
+          </div>
+          <span class="badge" id="vt-status-badge" style="background:rgba(90,138,170,0.15);color:var(--text-dim);border:1px solid var(--border2)">IDLE</span>
+        </div>
+
+        <div class="vt-upload-row">
+          <div>
+            <div class="field-label">CCTV Video Feed</div>
+            <label class="file-upload-label" for="vt-video-input">
+              📁 Choose Video
+              <input type="file" id="vt-video-input" accept="video/*" style="display:none" onchange="vtOnVideoSelect(this)"/>
+            </label>
+            <div id="vt-filename" style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-dim);margin-top:4px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">No file selected</div>
+          </div>
+          <button id="vt-start-btn" class="start-btn" onclick="vtUpload()" disabled>&#9654; Start Live Analytics</button>
+          <button id="vt-stop-btn" class="stop-btn" onclick="vtStop()" style="display:none">&#9632; Stop</button>
+        </div>
+
+        <div class="vt-streams">
+          <!-- ROW 1: Full-width Detection Video -->
+          <div class="vt-stream-card full-width">
+            <div class="vt-stream-title"><div class="vt-stream-title-dot"></div>Detection Video — Zone Split View (6 Zones)</div>
+            <div class="vt-placeholder" id="vt-video-placeholder"><span class="vt-placeholder-icon">&#127909;</span>Upload a video to start detection</div>
+            <img class="vt-img" id="vt-video-img" style="display:none" alt="Detection Video Stream"/>
+          </div>
+          <!-- ROW 2: Zone Twin + Dot Grid side by side -->
+          <div class="vt-stream-card">
+            <div class="vt-stream-title"><div class="vt-stream-title-dot" style="background:var(--yellow)"></div>Zone Twin — Crowd Density Map</div>
+            <div class="vt-placeholder" id="vt-zone-placeholder"><span class="vt-placeholder-icon">&#128506;</span>Zone density map will appear here</div>
+            <img class="vt-img" id="vt-zone-img" style="display:none" alt="Zone Twin Stream"/>
+          </div>
+          <div class="vt-stream-card">
+            <div class="vt-stream-title"><div class="vt-stream-title-dot" style="background:var(--orange)"></div>Dot Twin — 20×20 Density Grid</div>
+            <div class="vt-placeholder" id="vt-dot-placeholder"><span class="vt-placeholder-icon">&#128997;</span>Density grid will appear here</div>
+            <img class="vt-img" id="vt-dot-img" style="display:none" alt="Dot Twin Stream"/>
+          </div>
+          <!-- ROW 3: Full-width Crowd Count Graph -->
+          <div class="vt-stream-card full-width">
+            <div class="vt-stream-title"><div class="vt-stream-title-dot" style="background:var(--green)"></div>Crowd Count History — Time Series Graph</div>
+            <div class="vt-placeholder" id="vt-graph-placeholder"><span class="vt-placeholder-icon">&#128200;</span>Crowd count history graph will appear here</div>
+            <img class="vt-img" id="vt-graph-img" style="display:none" alt="Crowd Graph Stream"/>
+          </div>
+        </div>
+
+        <div class="vt-stats-strip" id="vt-stats-strip" style="display:none">
+          <div class="lm-item"><div class="lm-label">Total Detected</div><div class="lm-value" id="vt-count">&#8212;</div></div>
+          <div class="lm-item"><div class="lm-label">Frame #</div><div class="lm-value" style="color:var(--text-dim);font-size:0.8rem" id="vt-frame">&#8212;</div></div>
+          <div class="lm-item"><div class="lm-label">Status</div><div class="lm-value" id="vt-status-txt" style="font-size:0.8rem">&#8212;</div></div>
         </div>
       </div>
     </div>
@@ -1247,6 +1355,136 @@ async function stopPipeline() {
   badge.style.color       = 'var(--text-dim)';
   badge.style.borderColor = 'var(--border2)';
   refreshData();
+}
+
+// ─── VID-TWIN LIVE ANALYTICS ───────────────────────────────
+let vtSelectedFile  = null;
+let vtPollInterval  = null;
+let vtStreamsActive = false;
+
+function vtOnVideoSelect(input) {
+  vtSelectedFile = input.files[0];
+  if (vtSelectedFile) {
+    document.getElementById('vt-filename').textContent = vtSelectedFile.name;
+    document.getElementById('vt-start-btn').disabled = false;
+  } else {
+    document.getElementById('vt-filename').textContent = 'No file selected';
+    document.getElementById('vt-start-btn').disabled = true;
+  }
+}
+
+async function vtUpload() {
+  if (!vtSelectedFile) return;
+
+  const startBtn = document.getElementById('vt-start-btn');
+  startBtn.disabled = true;
+  startBtn.textContent = 'Uploading...';
+  vtSetBadge('loading');
+
+  const fd = new FormData();
+  fd.append('video', vtSelectedFile);
+
+  try {
+    const res  = await fetch('/api/vid-twin/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+    document.getElementById('vt-stop-btn').style.display  = 'inline-flex';
+    startBtn.style.display = 'none';
+
+    // Start polling status
+    clearInterval(vtPollInterval);
+    vtPollInterval = setInterval(vtPollStatus, 2500);
+    setTimeout(vtPollStatus, 1500);
+
+  } catch (e) {
+    alert('Upload error: ' + e.message);
+    startBtn.disabled = false;
+    startBtn.textContent = 'Start Live Analytics';
+    vtSetBadge('idle');
+  }
+}
+
+async function vtStop() {
+  clearInterval(vtPollInterval);
+  vtPollInterval = null;
+  await fetch('/api/vid-twin/stop', { method: 'POST' }).catch(() => {});
+  vtHideStreams();
+  vtSetBadge('idle');
+  document.getElementById('vt-stop-btn').style.display  = 'none';
+  document.getElementById('vt-start-btn').style.display = 'inline-flex';
+  document.getElementById('vt-start-btn').disabled = !vtSelectedFile;
+  document.getElementById('vt-start-btn').textContent = 'Start Live Analytics';
+  document.getElementById('vt-stats-strip').style.display = 'none';
+}
+
+async function vtPollStatus() {
+  try {
+    const res  = await fetch('/api/vid-twin/status');
+    const data = await res.json();
+    const status = data.status || 'idle';
+
+    vtSetBadge(status);
+    document.getElementById('vt-status-txt').textContent = status.toUpperCase();
+
+    if (status === 'running') {
+      if (!vtStreamsActive) vtShowStreams();
+      if (data.total_count !== undefined)
+        document.getElementById('vt-count').textContent = data.total_count;
+      if (data.frame_id !== undefined)
+        document.getElementById('vt-frame').textContent = '#' + data.frame_id;
+      document.getElementById('vt-stats-strip').style.display = 'flex';
+
+    } else if (status === 'stopped' || status === 'error') {
+      clearInterval(vtPollInterval);
+      vtPollInterval = null;
+      if (status === 'error' && data.error) {
+        console.error('[VID-TWIN]', data.error);
+      }
+    }
+  } catch (_) {}
+}
+
+function vtShowStreams() {
+  vtStreamsActive = true;
+  const ts = Date.now(); // cache-bust to force fresh MJPEG connections
+  ['video', 'zone', 'dot', 'graph'].forEach(kind => {
+    const img = document.getElementById('vt-' + kind + '-img');
+    const ph  = document.getElementById('vt-' + kind + '-placeholder');
+    if (img) {
+      img.src = '/api/vid-twin/stream/' + kind + '?t=' + ts;
+      img.style.display = 'block';
+    }
+    if (ph) {
+      ph.style.display = 'none';
+    }
+  });
+}
+
+function vtHideStreams() {
+  vtStreamsActive = false;
+  ['video', 'zone', 'dot', 'graph'].forEach(kind => {
+    const img = document.getElementById('vt-' + kind + '-img');
+    const ph  = document.getElementById('vt-' + kind + '-placeholder');
+    if (img) { img.src = ''; img.style.display = 'none'; }
+    if (ph)  { ph.style.display = 'flex'; }
+  });
+}
+
+function vtSetBadge(status) {
+  const badge = document.getElementById('vt-status-badge');
+  const map = {
+    idle:    { text: 'IDLE',      bg: 'rgba(90,138,170,0.15)', color: 'var(--text-dim)', border: 'var(--border2)' },
+    loading: { text: 'LOADING...', bg: 'rgba(255,204,0,0.12)', color: 'var(--yellow)',   border: 'rgba(255,204,0,0.4)' },
+    running: { text: 'LIVE',      bg: 'rgba(0,255,136,0.12)',  color: 'var(--green)',    border: 'rgba(0,255,136,0.4)' },
+    stopped: { text: 'STOPPED',   bg: 'rgba(90,138,170,0.15)', color: 'var(--text-dim)', border: 'var(--border2)' },
+    error:   { text: 'ERROR',     bg: 'rgba(255,34,68,0.12)',  color: 'var(--critical)', border: 'rgba(255,34,68,0.4)' },
+  };
+  const s = map[status] || map.idle;
+  badge.textContent        = s.text;
+  badge.style.background   = s.bg;
+  badge.style.color        = s.color;
+  badge.style.borderColor  = s.border;
 }
 
 // ─── INIT ──────────────────────────────────────
