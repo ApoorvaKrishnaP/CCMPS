@@ -816,18 +816,20 @@ function drawHeatmap(zones) {
   for (let x = 0; x < W; x += 60) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
   for (let y = 0; y < H; y += 60) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
 
-  // Draw venue outline
-  ctx.strokeStyle = 'rgba(0,212,255,0.3)';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(20, 20, W-40, H-40);
-  ctx.strokeStyle = 'rgba(0,212,255,0.15)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(W/3, 20, W/3, H-40);
+  const margin = 20;
+  const innerW = W - margin * 2;
+  const innerH = H - margin * 2;
+  const cellW = innerW / 4;
+  const cellH = innerH / 2;
 
-  // Draw heat blobs per zone
-  zones.forEach(z => {
-    const cx = (z.x / 100) * (W - 60) + 30;
-    const cy = (z.y / 100) * (H - 60) + 30;
+  // Draw heat blobs inside fixed cells
+  zones.slice(0, 8).forEach((z, index) => {
+    const row = Math.floor(index / 4);
+    const col = index % 4;
+    const cellX = margin + cellW * col;
+    const cellY = margin + cellH * row;
+    const cx = cellX + cellW / 2;
+    const cy = cellY + cellH / 2;
     const r = 50 + z.congestion_score * 0.5;
     const score = z.congestion_score / 100;
     const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
@@ -839,16 +841,16 @@ function drawHeatmap(zones) {
     grad.addColorStop(0, c + '0.7)');
     grad.addColorStop(0.5, c + '0.3)');
     grad.addColorStop(1, c + '0)');
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(cellX, cellY, cellW, cellH);
+    ctx.clip();
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fillStyle = grad;
     ctx.fill();
-  });
 
-  // Zone labels + flow arrows
-  zones.forEach(z => {
-    const cx = (z.x / 100) * (W - 60) + 30;
-    const cy = (z.y / 100) * (H - 60) + 30;
     const arrowMap = { North: [0,-1], South: [0,1], East: [1,0], West: [-1,0], Mixed: [0.5,0.5] };
     const [dx, dy] = arrowMap[z.flow_direction] || [0,0];
     const al = 20;
@@ -872,7 +874,25 @@ function drawHeatmap(zones) {
     ctx.font = '10px Share Tech Mono,monospace';
     ctx.fillStyle = '#5a8aaa';
     ctx.fillText(z.zone_id, cx, cy + 40);
+    ctx.restore();
   });
+
+  // Fixed 2x4 venue grid overlay
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0,212,255,0.24)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.rect(margin, margin, innerW, innerH);
+  for (let i = 1; i < 4; i++) {
+    const x = margin + cellW * i;
+    ctx.moveTo(x, margin);
+    ctx.lineTo(x, margin + innerH);
+  }
+  const midY = margin + cellH;
+  ctx.moveTo(margin, midY);
+  ctx.lineTo(margin + innerW, midY);
+  ctx.stroke();
+  ctx.restore();
 }
 
 // ─── PREDICTIONS ───────────────────────────────

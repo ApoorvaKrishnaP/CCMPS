@@ -3,7 +3,7 @@
 # Install Requirements
 
 ```bash
-pip install ultralytics
+pip install ultralytics 
 pip install opencv-python
 pip install deep-sort-realtime
 ```
