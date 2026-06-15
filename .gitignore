@@ -20,6 +20,7 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+.venv
 
 # Build outputs
 dist/
@@ -33,3 +34,5 @@ logs/
 # Misc
 .cache/
 .parcel-cache/
+uv.lock
+__pycache__

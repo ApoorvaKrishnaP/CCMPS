@@ -1,0 +1,15 @@
+[project]
+name = "crowd-analytics-api"
+version = "0.1.0"
+description = "FastAPI Backend for Crowd Predictive Analytics"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "ultralytics>=8.3.0",
+    "tensorflow>=2.15.0",      # Added for GRU inference
+    "opencv-python>=4.10.0",
+    "scikit-learn>=1.5.0",     # Required for your scaler.pkl
+    "numpy>=1.24.0,<2.0.0",    # Pinned down slightly to match standard TF/YOLO pairings
+    "pandas>=2.2.0"
+]
