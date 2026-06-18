@@ -1,0 +1,29 @@
+[project]
+name = "ccmps"
+version = "0.1.0"
+description = "Unified Workspace for Crowd Predictive Analytics Architecture"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # Core Network/Service Architecture Layer
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    
+    # Computer Vision & Real-time Tracking Dependencies
+    "opencv-python>=4.10.0",
+    "ultralytics>=8.4.47",
+    
+    # Machine Learning Core Inferences & Signal Processing
+    "tensorflow>=2.16.1",         # Upgraded to fully support Python 3.12 wheels on Windows
+    "scikit-learn>=1.5.0",        # Kept matching your scaler.pkl constraints
+    "scipy>=1.12.0",
+    
+    # Mathematical Data Pinning Layer
+    "numpy>=1.26.0,<2.0.0",       # NumPy 1.26 fully supports Python 3.12 while staying under 2.0.0
+    "pandas>=2.2.0",
+    
+    # Visualization & Testing Layout Utilities
+    "matplotlib>=3.10.0",
+    "seaborn>=0.13.2",
+    "setuptools"
+]
