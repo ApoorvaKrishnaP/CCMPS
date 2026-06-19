@@ -2,6 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from services.api.app.routers.analytics import router as analytics_router
 
 # Global dictionary to hold pre-loaded model weights in RAM
 ml_models = {}
@@ -39,6 +40,7 @@ async def lifespan(app: FastAPI):
             ml_models["encoder"] = pickle.load(f)
             
         print("[STARTUP] All machine learning architectures successfully cached in RAM.")
+        app.state.ml_models = ml_models
     except Exception as e:
         print(f"[CRITICAL ERR] Startup failure loading models: {e}")
         # Gracefully exit or handle initialization failures safely here
@@ -65,7 +67,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+app.include_router(analytics_router)
 @app.get("/health")
 async def health_check():
     """Trivial health route for monitoring software readiness."""
