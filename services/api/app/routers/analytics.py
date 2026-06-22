@@ -1,5 +1,5 @@
 import os
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request,Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from services.api.app.services.analytics_engine import stream_crowd_predictions
@@ -14,8 +14,12 @@ class StreamRequest(BaseModel):
     video_path: str
     horizon_sec: int = 30
 
-@router.post("/stream")
-async def stream_video_analytics(payload: StreamRequest, request: Request):
+@router.get("/stream")
+async def stream_video_analytics(
+    request: Request,
+    video_path: str = Query(..., description="Path to the target source video file"),
+    horizon_sec: int = Query(30, description="Predictive risk forecasting horizon timeframe")
+):
     """
     Exposes a real-time Server-Sent Events (SSE) data stream pipe 
     processing crowd predictive analytics for a specified video payload file.
@@ -29,18 +33,17 @@ async def stream_video_analytics(payload: StreamRequest, request: Request):
         )
 
     # 2. Extract and validate parameters
-    video_target = payload.video_path
-    horizon = payload.horizon_sec
+    
 
     # 3. Verify the file actually exists on the system disk boundary before executing OpenCV pipelines
-    if not os.path.exists(video_target):
+    if not os.path.exists(video_path):
         raise HTTPException(
             status_code=404, 
-            detail=f"Specified video payload file footprint not found on source track: '{video_target}'"
+            detail=f"Specified video payload file footprint not found on source track: '{video_path}'"
         )
 
     # 4. Initialize our streaming background generator engine instance
-    event_generator = stream_crowd_predictions(video_target, ml_models, horizon_sec=horizon)
+    event_generator = stream_crowd_predictions(video_path, ml_models, horizon_sec=horizon_sec)
 
     # 5. Return an asynchronous streaming HTTP response pipe with the correct SSE text-stream media headers
     return StreamingResponse(
