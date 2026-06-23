@@ -474,34 +474,15 @@ body::before {
 
     <div class="panel" id="pipeline-panel" style="margin-bottom:16px">
       <div class="panel-header">
-        <div class="panel-title"><div class="panel-title-dot"></div>AI Engine Core Pipeline Controls</div>
+        <div class="panel-title"><div class="panel-title-dot"></div>AI Engine Core Pipeline Controls — Upload per Zone</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="start-pipeline-btn" class="start-btn" onclick="uploadAllVideos()" disabled>▶ Start All Predictions</button>
+          <button id="stop-pipeline-btn" class="stop-btn" onclick="stopPipeline()" style="display:none">■ Stop All</button>
+        </div>
       </div>
       <div class="panel-body">
-        <div class="upload-row">
-          <div>
-            <div class="field-label">Target Zone Location Track</div>
-            <select id="upload-zone-select" class="zone-select-upload">
-              <option value="Gate A">Gate A</option>
-              <option value="Gate B">Gate B</option>
-              <option value="Main Hall">Main Hall</option>
-              <option value="North Wing" selected>North Wing</option>
-              <option value="South Wing">South Wing</option>
-              <option value="Exit 1">Exit 1</option>
-              <option value="Exit 2">Exit 2</option>
-              <option value="Concourse">Concourse</option>
-            </select>
-          </div>
-          <div>
-            <div class="field-label">CCTV Video Payload File Footprint</div>
-            <label class="file-upload-label" for="video-upload-input">
-              📁 Select Local Video
-              <input type="file" id="video-upload-input" accept="video/*" style="display:none" onchange="onVideoSelect(this)"/>
-            </label>
-            <div id="video-filename" style="margin-top:4px; font-family:var(--font-mono); font-size:0.7rem;">No file selected</div>
-          </div>
-          <button id="start-pipeline-btn" class="start-btn" onclick="uploadVideo()" disabled>▶ Activate Live Stream Matrix</button>
-          <button id="stop-pipeline-btn" class="stop-btn" onclick="stopPipeline()" style="display:none">■ Terminate Live Feed Connections</button>
-        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px" id="zone-upload-grid"></div>
+        <div style="margin-top:10px;font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim)" id="upload-status-line">Select videos for one or more zones, then click Start All Predictions.</div>
       </div>
     </div>
 
@@ -728,140 +709,188 @@ body::before {
 </main>
 <script>
 const STATIC_ZONES = ['Gate A', 'Gate B', 'Main Hall', 'North Wing', 'South Wing', 'Exit 1', 'Exit 2', 'Concourse'];
-let selectedVideoFile = null;
-let eventSourceInstance = null;
+let zoneFiles = {};          // { zoneName: File }
+let eventSources = {};       // { zoneName: EventSource }
+let zoneHistory = {};
+let latestZoneData = {};
+let vtPollInterval = null;
 
-// Dynamically creates the Option 1 Grid Cards on your screen when the page loads
+// Build per-zone upload cards and zone matrix cards on page load
 function initializeMatrixGrid() {
+  // Zone matrix cards (live analytics display)
   const container = document.getElementById('zone-matrix-grid');
   container.innerHTML = '';
   STATIC_ZONES.forEach((zone, index) => {
     const id = `Z${String(index + 1).padStart(2, '0')}`;
+    const zid = zone.replace(/\s+/g, '-');
     container.innerHTML += `
-      <div class="panel" id="card-${zone.replace(/\s+/g, '-')}" style="border: 1px solid var(--border); transition: all 0.3s;">
-        <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
-          <div class="panel-title" style="font-size:1.1rem; color:var(--text-bright)">${zone} <span style="font-size:0.65rem; color:var(--text-dim)">${id}</span></div>
-          <span class="badge" id="badge-${zone.replace(/\s+/g, '-')}" style="background:rgba(90,138,170,0.15); color:var(--text-dim)">OFFLINE</span>
+      <div class="panel" id="card-${zid}" style="border:1px solid var(--border);transition:all 0.3s;">
+        <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="panel-title" style="font-size:1.1rem;color:var(--text-bright)">${zone} <span style="font-size:0.65rem;color:var(--text-dim)">${id}</span></div>
+          <span class="badge" id="badge-${zid}" style="background:rgba(90,138,170,0.15);color:var(--text-dim)">OFFLINE</span>
         </div>
-        <div class="panel-body" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+        <div class="panel-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div>
-            <div style="font-family:var(--font-mono); font-size:0.65rem; color:var(--text-dim); margin-bottom:4px;">CURRENT STATUS</div>
-            <div style="font-size:1.1rem; font-weight:bold;" id="curr-count-${zone.replace(/\s+/g, '-')}">👥 -- People</div>
-            <div style="font-size:0.85rem; color:var(--text);" id="curr-speed-${zone.replace(/\s+/g, '-')}">📉 Speed: -- m/s</div>
+            <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim);margin-bottom:4px;">CURRENT STATUS</div>
+            <div style="font-size:1.1rem;font-weight:bold;" id="curr-count-${zid}">👥 -- People</div>
+            <div style="font-size:0.85rem;color:var(--text);" id="curr-speed-${zid}">📉 Speed: -- m/s</div>
           </div>
-          <div style="border-left: 1px solid var(--border); padding-left:12px;">
-            <div style="font-family:var(--font-mono); font-size:0.65rem; color:var(--text-dim); margin-bottom:4px;">🔮 30-SEC FORECAST</div>
-            <div style="font-size:1.1rem; font-weight:bold; color:var(--text-dim);" id="fore-risk-${zone.replace(/\s+/g, '-')}">--</div>
-            <div style="font-size:0.85rem; color:var(--text);" id="fore-stag-${zone.replace(/\s+/g, '-')}">⚠️ Stag: --</div>
+          <div style="border-left:1px solid var(--border);padding-left:12px;">
+            <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim);margin-bottom:4px;">🔮 30-SEC FORECAST</div>
+            <div style="font-size:1.1rem;font-weight:bold;color:var(--text-dim);" id="fore-risk-${zid}">--</div>
+            <div style="font-size:0.85rem;color:var(--text);" id="fore-stag-${zid}">⚠️ Stag: --</div>
           </div>
-          <div style="grid-column: 1 / -1; margin-top:6px; border-top:1px dashed var(--border); padding-top:8px;">
-            <div style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:0.7rem; margin-bottom:4px;">
+          <div style="grid-column:1/-1;margin-top:6px;border-top:1px dashed var(--border);padding-top:8px;">
+            <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.7rem;margin-bottom:4px;">
               <span>Tracking Confidence Score:</span>
-              <span id="conf-val-${zone.replace(/\s+/g, '-')}">--%</span>
+              <span id="conf-val-${zid}">--%</span>
             </div>
-            <div style="width:100%; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden;">
-              <div id="conf-bar-${zone.replace(/\s+/g, '-')}" style="width:0%; height:100%; background:var(--accent); transition: width 0.4s;"></div>
+            <div style="width:100%;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;">
+              <div id="conf-bar-${zid}" style="width:0%;height:100%;background:var(--accent);transition:width 0.4s;"></div>
             </div>
           </div>
         </div>
       </div>`;
   });
+
+  // Per-zone upload cards in pipeline panel
+  const uploadGrid = document.getElementById('zone-upload-grid');
+  if (!uploadGrid) return;
+  uploadGrid.innerHTML = '';
+  STATIC_ZONES.forEach((zone, index) => {
+    const id = `Z${String(index + 1).padStart(2, '0')}`;
+    const zid = zone.replace(/\s+/g, '-');
+    uploadGrid.innerHTML += `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;" id="upload-card-${zid}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-weight:700;font-size:0.9rem;color:var(--text-bright)">${zone}</div>
+          <span style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim)">${id}</span>
+        </div>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--surface);border:1px solid var(--border2);border-radius:4px;cursor:pointer;font-size:0.78rem;color:var(--text);width:100%;box-sizing:border-box;" for="file-${zid}">
+          📁 <span id="fname-${zid}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">No file selected</span>
+          <input type="file" id="file-${zid}" accept="video/*" style="display:none" onchange="onZoneFileSelect(this,'${zone}')"/>
+        </label>
+        <div style="margin-top:6px;font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim)" id="upload-state-${zid}">IDLE</div>
+      </div>`;
+  });
 }
 
-function onVideoSelect(input) {
-  selectedVideoFile = input.files[0];
-  if (selectedVideoFile) {
-    document.getElementById('video-filename').textContent = selectedVideoFile.name;
-    document.getElementById('start-pipeline-btn').disabled = false;
-  }
+function onZoneFileSelect(input, zone) {
+  const file = input.files[0];
+  if (!file) return;
+  zoneFiles[zone] = file;
+  const zid = zone.replace(/\s+/g, '-');
+  document.getElementById(`fname-${zid}`).textContent = file.name;
+  document.getElementById(`upload-state-${zid}`).textContent = 'READY';
+  document.getElementById(`upload-card-${zid}`).style.borderColor = 'var(--accent)';
+  // Enable start button if at least one file is selected
+  document.getElementById('start-pipeline-btn').disabled = Object.keys(zoneFiles).length === 0;
 }
 
-async function uploadVideo() {
-  if (!selectedVideoFile) return;
-  const zone = document.getElementById('upload-zone-select').value;
+async function uploadAllVideos() {
+  const zonesToRun = Object.keys(zoneFiles);
+  if (zonesToRun.length === 0) return;
+
   const startBtn = document.getElementById('start-pipeline-btn');
-  
   startBtn.disabled = true;
-  startBtn.textContent = '⏳ Processing Route Paths...';
+  startBtn.textContent = `⏳ Uploading ${zonesToRun.length} zone(s)...`;
+  document.getElementById('upload-status-line').textContent = `Uploading ${zonesToRun.length} video(s) and starting predictions simultaneously...`;
 
-  const fd = new FormData();
-  fd.append('video', selectedVideoFile);
-  fd.append('zone', zone);
+  // Upload all selected videos in parallel, then open one SSE stream per zone
+  const uploads = zonesToRun.map(async zone => {
+    const zid = zone.replace(/\s+/g, '-');
+    document.getElementById(`upload-state-${zid}`).textContent = 'UPLOADING...';
+    const fd = new FormData();
+    fd.append('video', zoneFiles[zone]);
+    fd.append('zone', zone);
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      document.getElementById(`upload-state-${zid}`).textContent = 'STREAMING';
+      document.getElementById(`upload-card-${zid}`).style.borderColor = '#00ff88';
+      openZoneStream(zone, data.video_path);
+    } catch(e) {
+      document.getElementById(`upload-state-${zid}`).textContent = 'ERROR';
+      document.getElementById(`upload-card-${zid}`).style.borderColor = 'var(--red)';
+    }
+  });
 
-  try {
-    const res = await fetch('/api/upload', { method: 'POST', body: fd });
-    const data = await res.json();
-    
-    document.getElementById('stop-pipeline-btn').style.display = 'inline-flex';
-    startBtn.style.display = 'none';
+  await Promise.allSettled(uploads);
 
-    // Establish Server-Sent Events stream connection directly to FastAPI port 8000
-    activateRealTimeStream(zone, data.video_path);
-  } catch (e) {
-    alert('Upload connection dropped: ' + e.message);
-    startBtn.disabled = false;
-    startBtn.textContent = '▶ Activate Live Stream Matrix';
-  }
+  document.getElementById('stop-pipeline-btn').style.display = 'inline-flex';
+  startBtn.style.display = 'none';
+  document.getElementById('upload-status-line').textContent = `${zonesToRun.length} zone(s) streaming live.`;
 }
 
-function activateRealTimeStream(targetZone, videoPath) {
-  if (eventSourceInstance) eventSourceInstance.close();
-  const targetId = targetZone.replace(/\s+/g, '-');
-  
-  // Notice this bypasses Node.js entirely for data streaming and hits FastAPI port 8000 directly!
-  eventSourceInstance = new EventSource(`http://127.0.0.1:8000/api/v1/analytics/stream?video_path=${encodeURIComponent(videoPath)}`);
-  
-  eventSourceInstance.onmessage = function(event) {
+function openZoneStream(zone, videoPath) {
+  // Close existing stream for this zone if any
+  if (eventSources[zone]) { eventSources[zone].close(); delete eventSources[zone]; }
+  const zid = zone.replace(/\s+/g, '-');
+
+  const es = new EventSource(`http://127.0.0.1:8000/api/v1/analytics/stream?video_path=${encodeURIComponent(videoPath)}`);
+  eventSources[zone] = es;
+
+  es.onmessage = function(event) {
     const data = JSON.parse(event.data);
-    
-    const badge = document.getElementById(`badge-${targetId}`);
-    const card = document.getElementById(`card-${targetId}`);
-    const countText = document.getElementById(`curr-count-${targetId}`);
-    const speedText = document.getElementById(`curr-speed-${targetId}`);
-    const riskText = document.getElementById(`fore-risk-${targetId}`);
-    const stagText = document.getElementById(`fore-stag-${targetId}`);
-    const confVal = document.getElementById(`conf-val-${targetId}`);
-    const confBar = document.getElementById(`conf-bar-${targetId}`);
+
+    // Warmup messages don't have prediction fields — show status and wait
+    if (data.status === 'warming_up') {
+      document.getElementById(`badge-${zid}`).textContent = `⏳ WARMUP ${data.seconds_left}s`;
+      document.getElementById(`upload-state-${zid}`).textContent = `WARMUP (${data.seconds_left}s left)`;
+      return;
+    }
+
+    if (!data.predicted_risk_level) return; // skip any other non-prediction messages
+
+    if (!zoneHistory[zone]) zoneHistory[zone] = [];
+    zoneHistory[zone].push({...data, ts: Date.now()});
+    latestZoneData[zone] = data;
 
     const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
-    const currentRiskColor = riskColors[data.predicted_risk_level] || 'var(--accent)';
+    const col = riskColors[data.predicted_risk_level] || 'var(--accent)';
 
-    // Update fields live frame-by-frame
-    badge.textContent = '● LIVE';
-    badge.style.background = 'rgba(0,255,136,0.15)';
-    badge.style.color = '#00ff88';
-    card.style.borderColor = currentRiskColor;
-
-    countText.textContent = `👥 ${Math.round(data.current_count)} People`;
-    speedText.textContent = `📉 Speed: ${data.avg_speed.toFixed(2)} m/s`;
-    riskText.textContent = data.predicted_risk_level.toUpperCase();
-    riskText.style.color = currentRiskColor;
-    stagText.textContent = `⚠️ Stag: ${Math.round(data.stagnation * 100)}%`;
-    
-    const confidencePct = Math.round(data.confidence_score * 100);
-    confVal.textContent = `${confidencePct}%`;
-    confBar.style.width = `${confidencePct}%`;
-    confBar.style.backgroundColor = currentRiskColor;
+    document.getElementById(`badge-${zid}`).textContent = '● LIVE';
+    document.getElementById(`badge-${zid}`).style.background = 'rgba(0,255,136,0.15)';
+    document.getElementById(`badge-${zid}`).style.color = '#00ff88';
+    document.getElementById(`upload-state-${zid}`).textContent = 'STREAMING';
+    document.getElementById(`card-${zid}`).style.borderColor = col;
+    document.getElementById(`curr-count-${zid}`).textContent = `👥 ${Math.round(data.current_count)} People`;
+    document.getElementById(`curr-speed-${zid}`).textContent = `📉 Speed: ${data.avg_speed.toFixed(2)} m/s`;
+    document.getElementById(`fore-risk-${zid}`).textContent = data.predicted_risk_level.toUpperCase();
+    document.getElementById(`fore-risk-${zid}`).style.color = col;
+    document.getElementById(`fore-stag-${zid}`).textContent = `⚠️ Stag: ${Math.round(data.stagnation * 100)}%`;
+    const pct = Math.round(data.confidence_score * 100);
+    document.getElementById(`conf-val-${zid}`).textContent = `${pct}%`;
+    document.getElementById(`conf-bar-${zid}`).style.width = `${pct}%`;
+    document.getElementById(`conf-bar-${zid}`).style.backgroundColor = col;
   };
 
-  eventSourceInstance.onerror = function() {
-    console.log("Stream complete.");
-    stopPipeline();
+  es.onerror = function() {
+    document.getElementById(`upload-state-${zid}`).textContent = 'DONE';
+    document.getElementById(`badge-${zid}`).textContent = 'DONE';
+    es.close();
+    delete eventSources[zone];
   };
 }
 
 async function stopPipeline() {
-  if (eventSourceInstance) {
-    eventSourceInstance.close();
-    eventSourceInstance = null;
-  }
+  Object.values(eventSources).forEach(es => es.close());
+  eventSources = {};
   await fetch('/api/pipeline-stop', { method: 'POST' }).catch(() => {});
-  
+
   document.getElementById('start-pipeline-btn').style.display = 'inline-flex';
-  document.getElementById('start-pipeline-btn').disabled = !selectedVideoFile;
-  document.getElementById('start-pipeline-btn').textContent = '▶ Activate Live Stream Matrix';
+  document.getElementById('start-pipeline-btn').disabled = Object.keys(zoneFiles).length === 0;
+  document.getElementById('start-pipeline-btn').textContent = '▶ Start All Predictions';
   document.getElementById('stop-pipeline-btn').style.display = 'none';
-  
+  document.getElementById('upload-status-line').textContent = 'Stopped. Select videos and click Start All Predictions to restart.';
+
+  // Reset upload card states
+  STATIC_ZONES.forEach(zone => {
+    const zid = zone.replace(/\s+/g, '-');
+    const stateEl = document.getElementById(`upload-state-${zid}`);
+    if (stateEl && stateEl.textContent === 'STREAMING') stateEl.textContent = 'READY';
+  });
+
   initializeMatrixGrid();
 }
 
@@ -869,6 +898,334 @@ async function stopPipeline() {
 window.addEventListener('load', () => {
   document.getElementById('loader').style.display = 'none';
   initializeMatrixGrid();
-}); </script> 
+});
+// ── TAB NAVIGATION ────────────────────────────────────────────────────────────
+function showPage(pageName) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + pageName).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (pageName === 'predictions') loadPredictions();
+  if (pageName === 'alerts') loadAlerts();
+  if (pageName === 'postEvent') loadPostEvent();
+}
+
+// ── PREDICTIONS TAB ───────────────────────────────────────────────────────────
+function loadPredictions() {
+  const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
+  const counts = { Safe: 0, Moderate: 0, High: 0, Critical: 0 };
+  const rows = document.getElementById('pred-rows');
+  rows.innerHTML = '';
+
+  STATIC_ZONES.forEach(zone => {
+    const d = latestZoneData[zone];
+    const risk = d ? d.predicted_risk_level : 'Safe';
+    const score = d ? Math.round(d.confidence_score * 100) : 0;
+    const count = d ? Math.round(d.current_count) : 0;
+    counts[risk] = (counts[risk] || 0) + 1;
+    const col = riskColors[risk] || '#00ff88';
+    rows.innerHTML += `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="width:100px;font-weight:600;color:var(--text-bright)">${zone}</div>
+        <div style="flex:1;background:var(--surface2);border-radius:4px;height:10px;overflow:hidden">
+          <div style="width:${score}%;height:100%;background:${col};transition:width 0.4s"></div>
+        </div>
+        <div style="width:80px;font-family:var(--font-mono);font-size:0.75rem;color:${col}">${risk.toUpperCase()}</div>
+        <div style="width:60px;text-align:right;font-family:var(--font-mono);font-size:0.75rem;color:var(--text-dim)">${count} ppl</div>
+      </div>`;
+  });
+
+  document.getElementById('rc-safe').textContent = counts.Safe || 0;
+  document.getElementById('rc-moderate').textContent = counts.Moderate || 0;
+  document.getElementById('rc-high').textContent = counts.High || 0;
+  document.getElementById('rc-critical').textContent = counts.Critical || 0;
+
+  // Draw donut chart
+  const canvas = document.getElementById('risk-donut');
+  const ctx = canvas.getContext('2d');
+  const total = STATIC_ZONES.length;
+  const slices = [
+    { val: counts.Safe || 0, col: '#00ff88' },
+    { val: counts.Moderate || 0, col: '#ffcc00' },
+    { val: counts.High || 0, col: '#ff7700' },
+    { val: counts.Critical || 0, col: '#ff2244' },
+  ];
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  let startAngle = -Math.PI / 2;
+  const cx = canvas.width / 2, cy = canvas.height / 2, r = 70, inner = 40;
+  slices.forEach(s => {
+    if (!s.val) return;
+    const sweep = (s.val / total) * 2 * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, startAngle + sweep);
+    ctx.closePath();
+    ctx.fillStyle = s.col;
+    ctx.fill();
+    startAngle += sweep;
+  });
+  ctx.beginPath();
+  ctx.arc(cx, cy, inner, 0, 2 * Math.PI);
+  ctx.fillStyle = '#060f1a';
+  ctx.fill();
+  ctx.fillStyle = '#c8e6f5';
+  ctx.font = 'bold 18px Rajdhani';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(total + ' zones', cx, cy);
+}
+
+// ── ALERTS TAB ────────────────────────────────────────────────────────────────
+function loadAlerts() {
+  const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
+  const actions = {
+    High: 'Monitor closely — consider redirecting crowd flow',
+    Critical: 'Immediate action required — deploy staff and open exits',
+    Moderate: 'Keep watch — prepare contingency staff',
+  };
+  const list = document.getElementById('alerts-full-list');
+  const quick = document.getElementById('quick-actions-list');
+  list.innerHTML = '';
+  quick.innerHTML = '';
+  let hasAlerts = false;
+
+  STATIC_ZONES.forEach(zone => {
+    const d = latestZoneData[zone];
+    if (!d) return;
+    const risk = d.predicted_risk_level;
+    if (risk === 'Safe') return;
+    hasAlerts = true;
+    const col = riskColors[risk];
+    const time = new Date().toLocaleTimeString();
+    list.innerHTML += `
+      <div style="padding:14px;margin-bottom:8px;background:rgba(255,255,255,0.03);border:1px solid ${col}44;border-left:3px solid ${col};border-radius:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-weight:700;color:${col};font-size:1rem">${zone}</span>
+          <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim)">${time}</span>
+        </div>
+        <div style="font-size:0.85rem;margin-bottom:6px">${risk} risk — ${Math.round(d.current_count)} people, speed ${d.avg_speed.toFixed(2)} m/s, stagnation ${Math.round(d.stagnation*100)}%</div>
+        <div style="font-family:var(--font-mono);font-size:0.7rem;color:${col}">⚡ ${actions[risk] || ''}</div>
+      </div>`;
+    quick.innerHTML += `
+      <div style="padding:8px 12px;margin-bottom:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border2);border-radius:4px;font-size:0.82rem">
+        <span style="color:${col};font-weight:600">${zone}:</span> ${actions[risk] || ''}
+      </div>`;
+  });
+
+  if (!hasAlerts) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim);font-family:var(--font-mono)">✅ No active alerts — all zones within safe parameters</div>';
+    quick.innerHTML = '<div style="color:var(--text-dim);font-size:0.82rem;padding:10px">No actions required at this time.</div>';
+  }
+}
+
+// ── POST-EVENT TAB ────────────────────────────────────────────────────────────
+function loadPostEvent() {
+  renderBarChart('density-chart', STATIC_ZONES.map(z => ({
+    label: z,
+    value: latestZoneData[z] ? Math.round(latestZoneData[z].current_count) : 0,
+    color: '#00d4ff'
+  })), 'People Count');
+
+  renderBarChart('peak-chart', STATIC_ZONES.map(z => {
+    const hist = zoneHistory[z] || [];
+    const peak = hist.length ? Math.max(...hist.map(d => d.current_count)) : 0;
+    return { label: z, value: Math.round(peak), color: '#ff7700' };
+  }), 'Peak Count');
+
+  renderBarChart('efficiency-chart', STATIC_ZONES.map(z => ({
+    label: z,
+    value: latestZoneData[z] ? Math.round((1 - latestZoneData[z].stagnation) * 100) : 100,
+    color: '#00ff88'
+  })), '% Efficiency');
+
+  const timeline = document.getElementById('event-timeline');
+  const events = [];
+  STATIC_ZONES.forEach(zone => {
+    const hist = zoneHistory[zone] || [];
+    hist.forEach(d => {
+      if (d.predicted_risk_level === 'High' || d.predicted_risk_level === 'Critical') {
+        events.push({ zone, risk: d.predicted_risk_level, ts: d.ts });
+      }
+    });
+  });
+  events.sort((a, b) => a.ts - b.ts);
+  const riskColors = { High: '#ff7700', Critical: '#ff2244', Moderate: '#ffcc00' };
+  timeline.innerHTML = events.length
+    ? events.map(e => `
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="width:10px;height:10px;border-radius:50%;background:${riskColors[e.risk]};flex-shrink:0"></div>
+          <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim)">${new Date(e.ts).toLocaleTimeString()}</div>
+          <div style="font-size:0.85rem"><span style="color:${riskColors[e.risk]};font-weight:600">${e.risk}</span> — ${e.zone}</div>
+        </div>`).join('')
+    : '<div style="color:var(--text-dim);font-family:var(--font-mono);font-size:0.8rem;padding:20px;text-align:center">No high-risk events recorded yet. Run a pipeline to collect data.</div>';
+}
+
+function renderBarChart(containerId, data, unit) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const max = Math.max(...data.map(d => d.value), 1);
+  container.innerHTML = data.map(d => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div style="width:80px;font-size:0.75rem;text-align:right;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.label}</div>
+      <div style="flex:1;background:var(--surface2);border-radius:3px;height:18px;overflow:hidden">
+        <div style="width:${(d.value/max)*100}%;height:100%;background:${d.color};transition:width 0.5s;display:flex;align-items:center;padding-left:6px">
+          <span style="font-family:var(--font-mono);font-size:0.6rem;color:#000;font-weight:700">${d.value}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ── DIGITAL TWIN — SIMULATION ─────────────────────────────────────────────────
+async function runSim(scenario, btn) {
+  document.querySelectorAll('.sim-btn').forEach(b => b.style.opacity = '0.5');
+  btn.style.opacity = '1';
+  btn.style.outline = '2px solid var(--accent)';
+
+  const badge = document.getElementById('flow-scenario-badge');
+  badge.style.display = 'inline-block';
+  badge.textContent = scenario.toUpperCase().replace('_', ' ');
+  document.getElementById('sim-result-title').textContent = 'RUNNING SIMULATION...';
+
+  try {
+    const res = await fetch('http://127.0.0.1:8000/api/v1/analytics/simulate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario })
+    });
+    const data = await res.json();
+    renderSimResults(data);
+  } catch(e) {
+    document.getElementById('sim-result-title').textContent = 'SIMULATION ERROR — Is FastAPI running?';
+  }
+  document.querySelectorAll('.sim-btn').forEach(b => { b.style.opacity = '1'; b.style.outline = 'none'; });
+}
+
+function renderSimResults(data) {
+  const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
+  document.getElementById('sim-result-title').textContent = `SCENARIO: ${data.scenario.toUpperCase().replace('_', ' ')} — RESULTS`;
+  const grid = document.getElementById('sim-zone-grid');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px';
+  grid.innerHTML = data.zones.map(z => `
+    <div style="padding:10px;background:var(--surface2);border:1px solid ${riskColors[z.risk]}44;border-radius:6px;text-align:center">
+      <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:4px">${z.name}</div>
+      <div style="font-size:1.2rem;font-weight:800;color:${riskColors[z.risk]}">${z.score}</div>
+      <div style="font-family:var(--font-mono);font-size:0.6rem;color:${riskColors[z.risk]}">${z.risk.toUpperCase()}</div>
+    </div>`).join('');
+
+  const rec = document.getElementById('sim-recommendations');
+  rec.innerHTML = data.recommendations.map((r, i) => `
+    <div style="padding:10px 12px;margin-bottom:6px;background:rgba(0,212,255,0.04);border:1px solid var(--border2);border-radius:4px;font-size:0.85rem">
+      <span style="color:var(--accent);font-family:var(--font-mono);font-size:0.7rem">[${String(i+1).padStart(2,'0')}]</span> ${r}
+    </div>`).join('');
+
+  drawFlowCanvas(data.zones);
+}
+
+function drawFlowCanvas(zones) {
+  const canvas = document.getElementById('flow-canvas');
+  if (!canvas) return;
+  canvas.width = canvas.parentElement.clientWidth - 32;
+  canvas.height = 200;
+  const ctx = canvas.getContext('2d');
+  const cols = 4, rows = 2;
+  const cw = canvas.width / cols, ch = canvas.height / rows;
+  const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
+  zones.forEach((z, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = col * cw, y = row * ch;
+    ctx.fillStyle = riskColors[z.risk] + '33';
+    ctx.strokeStyle = riskColors[z.risk];
+    ctx.lineWidth = 1;
+    ctx.fillRect(x+4, y+4, cw-8, ch-8);
+    ctx.strokeRect(x+4, y+4, cw-8, ch-8);
+    ctx.fillStyle = riskColors[z.risk];
+    ctx.font = 'bold 11px Rajdhani';
+    ctx.textAlign = 'center';
+    ctx.fillText(z.name, x + cw/2, y + ch/2 - 8);
+    ctx.font = 'bold 16px Exo 2';
+    ctx.fillText(z.score, x + cw/2, y + ch/2 + 10);
+  });
+}
+
+// ── DIGITAL TWIN — VID-TWIN LIVE STREAMS ─────────────────────────────────────
+let vtSelectedFile = null;
+
+function vtOnVideoSelect(input) {
+  vtSelectedFile = input.files[0];
+  if (vtSelectedFile) {
+    document.getElementById('vt-filename').textContent = vtSelectedFile.name;
+    document.getElementById('vt-start-btn').disabled = false;
+  }
+}
+
+async function vtUpload() {
+  if (!vtSelectedFile) return;
+  document.getElementById('vt-start-btn').disabled = true;
+  document.getElementById('vt-status-badge').textContent = 'UPLOADING...';
+
+  const fd = new FormData();
+  fd.append('video', vtSelectedFile);
+
+  try {
+    const res = await fetch('/api/vid-twin/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    const port = data.port || 5004;
+
+    document.getElementById('vt-start-btn').style.display = 'none';
+    document.getElementById('vt-stop-btn').style.display = 'inline-flex';
+    document.getElementById('vt-status-badge').textContent = 'LOADING';
+    document.getElementById('vt-stats-strip').style.display = 'flex';
+
+    // Point all img tags to MJPEG streams from vid_twin_api.py
+    const base = `http://localhost:${port}`;
+    ['video','zone','dot','graph'].forEach(kind => {
+      const img = document.getElementById(`vt-${kind}-img`);
+      const ph = document.getElementById(`vt-${kind}-placeholder`);
+      img.src = `${base}/stream/${kind}`;
+      img.style.display = 'block';
+      if (ph) ph.style.display = 'none';
+    });
+
+    // Poll status
+    vtPollInterval = setInterval(async () => {
+      try {
+        const s = await fetch('/api/vid-twin/status').then(r => r.json());
+        document.getElementById('vt-count').textContent = s.total_count ?? '—';
+        document.getElementById('vt-frame').textContent = s.frame_id ?? '—';
+        document.getElementById('vt-status-txt').textContent = (s.status || '—').toUpperCase();
+        document.getElementById('vt-status-badge').textContent = (s.status || 'LOADING').toUpperCase();
+      } catch(_) {}
+    }, 2000);
+  } catch(e) {
+    document.getElementById('vt-status-badge').textContent = 'ERROR';
+    document.getElementById('vt-start-btn').disabled = false;
+    alert('Vid-twin start failed: ' + e.message);
+  }
+}
+
+async function vtStop() {
+  if (vtPollInterval) { clearInterval(vtPollInterval); vtPollInterval = null; }
+  await fetch('/api/vid-twin/stop', { method: 'POST' }).catch(() => {});
+
+  ['video','zone','dot','graph'].forEach(kind => {
+    const img = document.getElementById(`vt-${kind}-img`);
+    const ph = document.getElementById(`vt-${kind}-placeholder`);
+    if (img) { img.src = ''; img.style.display = 'none'; }
+    if (ph) ph.style.display = 'flex';
+  });
+
+  document.getElementById('vt-start-btn').style.display = 'inline-flex';
+  document.getElementById('vt-start-btn').disabled = !vtSelectedFile;
+  document.getElementById('vt-stop-btn').style.display = 'none';
+  document.getElementById('vt-status-badge').textContent = 'IDLE';
+  document.getElementById('vt-stats-strip').style.display = 'none';
+}
+
+
+
+
+
+
+</script> 
 </body> 
 </html>  

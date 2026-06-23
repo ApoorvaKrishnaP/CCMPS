@@ -3,6 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const axios = require('axios');
+const http = require('http');
+const { spawn } = require('child_process');
 const app = express();
 const PORT = 3001;
 
@@ -25,14 +27,14 @@ let pipelineStatus = 'idle'; // idle | loading | running | error | stopped
 
 const FASTAPI_API_URL = "http://127.0.0.1:8000/api/v1/analytics";
 
-// // ── VID-TWIN PROCESS STATE ───────────────────────────────────────────────────
-// let vidTwinProcess = null;   // child_process for vid_twin_api.py
-// let vidTwinStatus = 'idle'; // idle | loading | running | stopped | error
-// let vidTwinVideo = null;   // path to uploaded video
+// ── VID-TWIN PROCESS STATE ───────────────────────────────────────────────────
+let vidTwinProcess = null;   // child_process for vid_twin_api.py
+let vidTwinStatus = 'idle'; // idle | loading | running | stopped | error
+let vidTwinVideo = null;   // path to uploaded video
 
-// const VID_TWIN_PORT = 5004;
-// const VID_TWIN_API = `http://localhost:${VID_TWIN_PORT}`;
-// Clean static metadata configurations layout
+const VID_TWIN_PORT = 5004;
+const VID_TWIN_API = `http://localhost:${VID_TWIN_PORT}`;
+//Clean static metadata configurations layout
 const ZONE_META = [
   { id: 'Z01', name: 'Gate A' }, { id: 'Z02', name: 'Gate B' },
   { id: 'Z03', name: 'Main Hall' }, { id: 'Z04', name: 'North Wing' },
@@ -321,115 +323,115 @@ app.listen(PORT, () => console.log(`Gateway proxy operating natively on port ${P
 // });
 
 // // ── VID-TWIN: Kill helper ────────────────────────────────────────────────────
-// function killVidTwin() {
-//   if (vidTwinProcess) {
-//     try { vidTwinProcess.kill('SIGTERM'); } catch (_) { }
-//     vidTwinProcess = null;
-//   }
-//   vidTwinStatus = 'idle';
-// }
+function killVidTwin() {
+  if (vidTwinProcess) {
+    try { vidTwinProcess.kill('SIGTERM'); } catch (_) { }
+    vidTwinProcess = null;
+  }
+  vidTwinStatus = 'idle';
+}
 
 // // ── VID-TWIN: Upload & Start ─────────────────────────────────────────────────
-// app.post('/api/vid-twin/upload', upload.single('video'), (req, res) => {
-//   if (!req.file) return res.status(400).json({ error: 'No video file received.' });
+app.post('/api/vid-twin/upload', upload.single('video'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No video file received.' });
 
-//   const videoPath = req.file.path;
-//   killVidTwin();
-//   vidTwinVideo = videoPath;
-//   vidTwinStatus = 'loading';
+  const videoPath = req.file.path;
+  killVidTwin();
+  vidTwinVideo = videoPath;
+  vidTwinStatus = 'loading';
 
-//   const py = process.platform === 'win32' ? 'python' : 'python3';
-//   vidTwinProcess = spawn(py, [
-//     'vid_twin_api.py',
-//     '--video', videoPath,
-//     '--port', String(VID_TWIN_PORT),
-//   ], { cwd: __dirname });
+  const py = process.platform === 'win32' ? 'python' : 'python3';
+  vidTwinProcess = spawn(py, [
+    'vid_twin_api.py',
+    '--video', videoPath,
+    '--port', String(VID_TWIN_PORT),
+  ], { cwd: __dirname });
 
-//   vidTwinProcess.stdout.on('data', d => process.stdout.write(`[VID-TWIN] ${d}`));
-//   vidTwinProcess.stderr.on('data', d => process.stderr.write(`[VID-TWIN-ERR] ${d}`));
-//   vidTwinProcess.on('exit', code => {
-//     console.log(`[VID-TWIN] exited with code ${code}`);
-//     vidTwinProcess = null;
-//     vidTwinStatus = 'stopped';
-//   });
+  vidTwinProcess.stdout.on('data', d => process.stdout.write(`[VID-TWIN] ${d}`));
+  vidTwinProcess.stderr.on('data', d => process.stderr.write(`[VID-TWIN-ERR] ${d}`));
+  vidTwinProcess.on('exit', code => {
+    console.log(`[VID-TWIN] exited with code ${code}`);
+    vidTwinProcess = null;
+    vidTwinStatus = 'stopped';
+  });
 
-//   // Poll status until running
-//   const poll = setInterval(async () => {
-//     try {
-//       const data = await proxyGet2('/status');
-//       vidTwinStatus = data.status || 'running';
-//       if (vidTwinStatus === 'running') clearInterval(poll);
-//     } catch (_) { }
-//   }, 2000);
+  // Poll status until running
+  const poll = setInterval(async () => {
+    try {
+      const data = await proxyGet2('/status');
+      vidTwinStatus = data.status || 'running';
+      if (vidTwinStatus === 'running') clearInterval(poll);
+    } catch (_) { }
+  }, 2000);
 
-//   res.json({
-//     message: 'vid_twin_api started',
-//     video: req.file.filename,
-//     port: VID_TWIN_PORT,
-//     status: 'loading',
-//   });
-// });
+  res.json({
+    message: 'vid_twin_api started',
+    video: req.file.filename,
+    port: VID_TWIN_PORT,
+    status: 'loading',
+  });
+});
 
 // /** HTTP GET helper for vid_twin_api */
-// function proxyGet2(urlPath) {
-//   return new Promise((resolve, reject) => {
-//     const req = http.get(`${VID_TWIN_API}${urlPath}`, (res) => {
-//       let raw = '';
-//       res.on('data', chunk => (raw += chunk));
-//       res.on('end', () => {
-//         try { resolve(JSON.parse(raw)); }
-//         catch (e) { reject(new Error('invalid JSON')); }
-//       });
-//     });
-//     req.setTimeout(2000, () => { req.destroy(); reject(new Error('timeout')); });
-//     req.on('error', reject);
-//   });
-// }
+function proxyGet2(urlPath) {
+  return new Promise((resolve, reject) => {
+    const req = http.get(`${VID_TWIN_API}${urlPath}`, (res) => {
+      let raw = '';
+      res.on('data', chunk => (raw += chunk));
+      res.on('end', () => {
+        try { resolve(JSON.parse(raw)); }
+        catch (e) { reject(new Error('invalid JSON')); }
+      });
+    });
+    req.setTimeout(2000, () => { req.destroy(); reject(new Error('timeout')); });
+    req.on('error', reject);
+  });
+}
 
 // // ── VID-TWIN: Status ─────────────────────────────────────────────────────────
-// app.get('/api/vid-twin/status', async (req, res) => {
-//   if (!vidTwinProcess && vidTwinStatus === 'idle') {
-//     return res.json({ status: 'idle' });
-//   }
-//   try {
-//     const data = await proxyGet2('/status');
-//     vidTwinStatus = data.status;
-//     return res.json(data);
-//   } catch (_) {
-//     return res.json({ status: vidTwinStatus });
-//   }
-// });
+app.get('/api/vid-twin/status', async (req, res) => {
+  if (!vidTwinProcess && vidTwinStatus === 'idle') {
+    return res.json({ status: 'idle' });
+  }
+  try {
+    const data = await proxyGet2('/status');
+    vidTwinStatus = data.status;
+    return res.json(data);
+  } catch (_) {
+    return res.json({ status: vidTwinStatus });
+  }
+});
 
 // // ── VID-TWIN: Stop ───────────────────────────────────────────────────────────
-// app.post('/api/vid-twin/stop', (req, res) => {
-//   // Send POST to vid_twin_api /stop then kill the process
-//   try {
-//     const stopReq = http.request({
-//       hostname: 'localhost', port: VID_TWIN_PORT,
-//       path: '/stop', method: 'POST',
-//     });
-//     stopReq.on('error', () => { });
-//     stopReq.end();
-//   } catch (_) { }
-//   setTimeout(() => killVidTwin(), 500);
-//   vidTwinVideo = null;
-//   res.json({ message: 'vid_twin stopped' });
-// });
+app.post('/api/vid-twin/stop', (req, res) => {
+  // Send POST to vid_twin_api /stop then kill the process
+  try {
+    const stopReq = http.request({
+      hostname: 'localhost', port: VID_TWIN_PORT,
+      path: '/stop', method: 'POST',
+    });
+    stopReq.on('error', () => { });
+    stopReq.end();
+  } catch (_) { }
+  setTimeout(() => killVidTwin(), 500);
+  vidTwinVideo = null;
+  res.json({ message: 'vid_twin stopped' });
+});
 
-// // ── VID-TWIN: Stream proxy (so browser avoids CORS) ─────────────────────────
-// ['video', 'zone', 'dot', 'graph'].forEach(kind => {
-//   app.get(`/api/vid-twin/stream/${kind}`, (req, res) => {
-//     if (!vidTwinProcess) {
-//       return res.status(503).send('vid_twin not running');
-//     }
-//     const upstream = http.get(`${VID_TWIN_API}/stream/${kind}`, upRes => {
-//       res.writeHead(upRes.statusCode, upRes.headers);
-//       upRes.pipe(res);
-//     });
-//     upstream.on('error', () => res.status(503).send('stream unavailable'));
-//     req.on('close', () => upstream.destroy());
-//   });
-// });
+// ── VID-TWIN: Stream proxy (so browser avoids CORS) ─────────────────────────
+['video', 'zone', 'dot', 'graph'].forEach(kind => {
+  app.get(`/api/vid-twin/stream/${kind}`, (req, res) => {
+    if (!vidTwinProcess) {
+      return res.status(503).send('vid_twin not running');
+    }
+    const upstream = http.get(`${VID_TWIN_API}/stream/${kind}`, upRes => {
+      res.writeHead(upRes.statusCode, upRes.headers);
+      upRes.pipe(res);
+    });
+    upstream.on('error', () => res.status(503).send('stream unavailable'));
+    req.on('close', () => upstream.destroy());
+  });
+});
 
 // // ── SPA fallback ──────────────────────────────────────────────────────────────
 // app.get('/{*path}', (req, res) =>

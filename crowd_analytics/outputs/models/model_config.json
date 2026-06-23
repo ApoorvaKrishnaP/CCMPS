@@ -1,0 +1,25 @@
+{
+  "sequence_length": 6,
+  "n_features": 11,
+  "n_classes": 3,
+  "class_names": [
+    "HIGH",
+    "SAFE",
+    "WARNING"
+  ],
+  "feature_names": [
+    "people_count",
+    "density",
+    "avg_speed_mps",
+    "stagnation_ratio",
+    "avg_dwell_time_sec",
+    "flow_conflict_ratio",
+    "directional_entropy",
+    "acceleration_variance",
+    "zone_transitions",
+    "inflow",
+    "outflow"
+  ],
+  "test_accuracy": 0.8191933035850525,
+  "test_loss": 0.5355479121208191
+}
