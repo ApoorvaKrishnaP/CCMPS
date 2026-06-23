@@ -796,7 +796,7 @@ async function uploadVideo() {
     startBtn.style.display = 'none';
 
     // Establish Server-Sent Events stream connection directly to FastAPI port 8000
-    activateRealTimeStream(zone, selectedVideoFile.name);
+    activateRealTimeStream(zone, data.video_path);
   } catch (e) {
     alert('Upload connection dropped: ' + e.message);
     startBtn.disabled = false;
@@ -804,12 +804,12 @@ async function uploadVideo() {
   }
 }
 
-function activateRealTimeStream(targetZone, filename) {
+function activateRealTimeStream(targetZone, videoPath) {
   if (eventSourceInstance) eventSourceInstance.close();
   const targetId = targetZone.replace(/\s+/g, '-');
   
   // Notice this bypasses Node.js entirely for data streaming and hits FastAPI port 8000 directly!
-  eventSourceInstance = new EventSource(`http://127.0.0.1:8000/api/v1/analytics/stream?video_path=${filename}`);
+  eventSourceInstance = new EventSource(`http://127.0.0.1:8000/api/v1/analytics/stream?video_path=${encodeURIComponent(videoPath)}`);
   
   eventSourceInstance.onmessage = function(event) {
     const data = JSON.parse(event.data);
