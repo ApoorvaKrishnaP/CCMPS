@@ -1,5 +1,5 @@
 import os
-from fastapi import APIRouter, HTTPException, Request,Query
+from fastapi import APIRouter, HTTPException, Request, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from services.api.app.services.analytics_engine import stream_crowd_predictions
@@ -8,6 +8,9 @@ router = APIRouter(
     prefix="/api/v1/analytics",
     tags=["Crowd Analytics"]
 )
+
+# RTSP credentials live server-side only — never sent to the browser
+_RTSP_URL = "rtsp://admin:oW8Wzy@172.17.14.213:8556"
 
 # Define the incoming data contract (Pydantic payload validation)
 class StreamRequest(BaseModel):
@@ -46,20 +49,36 @@ async def stream_video_analytics(
     event_generator = stream_crowd_predictions(video_path, ml_models, horizon_sec=horizon_sec)
 
     # 5. Return an asynchronous streaming HTTP response pipe with the correct SSE text-stream media headers
+    return StreamingResponse(event_generator, media_type="text/event-stream")
+
+
+@router.get("/live")
+async def stream_live_rtsp(
+    request: Request,
+    horizon_sec: int = Query(30, description="Forecasting horizon in seconds")
+):
+    """
+    Connects to the configured RTSP camera and runs the identical analytics
+    pipeline used for uploaded videos. Credentials stay server-side.
+    """
+    ml_models = request.app.state.ml_models
+    if not ml_models:
+        raise HTTPException(status_code=503, detail="Models not loaded.")
     return StreamingResponse(
-        event_generator, 
+        stream_crowd_predictions(_RTSP_URL, ml_models, horizon_sec=horizon_sec),
         media_type="text/event-stream"
     )
+
+
 from pydantic import BaseModel as _Base
 from typing import Optional
 
 class SimulateRequest(_Base):
     scenario: str  # "gate_closure" | "increased_inflow" | "evacuation"
 
-ZONE_NAMES = ['Gate A', 'Gate B', 'Main Hall', 'North Wing', 'South Wing', 'Exit 1', 'Exit 2', 'Concourse']
+ZONE_NAMES = ['Gate A', 'Gate B', 'Main Hall', 'Concourse']
 
-BASE_SCORES = {'Gate A': 42, 'Gate B': 38, 'Main Hall': 61, 'North Wing': 33,
-               'South Wing': 29, 'Exit 1': 55, 'Exit 2': 48, 'Concourse': 70}
+BASE_SCORES = {'Gate A': 42, 'Gate B': 38, 'Main Hall': 61, 'Concourse': 70}
 
 def _risk(score):
     if score < 30: return 'Safe'

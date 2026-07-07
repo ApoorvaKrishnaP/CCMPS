@@ -17,7 +17,10 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  filename: (req, file, cb) => cb(null, `zone_feed_${Date.now()}${path.extname(file.originalname)}`),
+  filename: (req, file, cb) => {
+    const uniqueId = `${Date.now()}_${process.hrtime.bigint()}_${Math.round(Math.random() * 1e9)}`;
+    cb(null, `zone_feed_${uniqueId}${path.extname(file.originalname)}`);
+  },
 });
 const upload = multer({ storage, limits: { fileSize: 500 * 1024 * 1024 } }); // 500 MB max
 

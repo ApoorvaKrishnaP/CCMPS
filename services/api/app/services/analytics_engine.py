@@ -3,9 +3,14 @@ import json
 import time
 import math
 import asyncio
+import threading
 import numpy as np
 from ultralytics import YOLO as _YOLO
 from services.api.app.services.math_helpers import dir_entropy, flow_conflict
+
+# torch.load (used inside YOLO init) is NOT thread-safe for concurrent calls.
+# This lock serializes YOLO loads so zones don't corrupt each other's load.
+_yolo_load_lock = threading.Lock()
 
 FEATURE_COLS = [
     "people_count", "density", "avg_speed_mps", "stagnation_ratio",
@@ -18,12 +23,17 @@ async def stream_crowd_predictions(video_path: str, ml_models: dict, horizon_sec
     Async generator — each zone runs in its own asyncio.to_thread call so
     multiple zones can process frames concurrently without blocking each other.
     """
+    is_rtsp = video_path.lower().startswith("rtsp://")
+
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        yield f"data: {json.dumps({'error': f'Failed to open video: {video_path}'})}\n\n"
+        yield f"data: {json.dumps({'error': f'Failed to open source: {video_path}'})}\n\n"
         return
 
-    src_fps   = cap.get(cv2.CAP_PROP_FPS) or 24.0
+    cap_ref = [cap]   # mutable so _process_one_second can swap in a reconnected cap
+
+    raw_fps = cap.get(cv2.CAP_PROP_FPS)
+    src_fps = raw_fps if raw_fps and 0 < raw_fps <= 120 else 25.0
     frame_w   = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_h   = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     area_m2   = 20.0 * 12.0
@@ -31,8 +41,15 @@ async def stream_crowd_predictions(video_path: str, ml_models: dict, horizon_sec
     count_y   = int(frame_h * 0.5)
     frames_per_s = max(1, int(round(src_fps)))
 
-    # Fresh YOLO per zone so each has its own ByteTracker state
-    yolo_model = _YOLO(ml_models["yolo_path"])
+    # Load a fresh YOLO per zone (isolated ByteTracker state).
+    # _yolo_load_lock serializes concurrent torch.load calls — each zone still
+    # gets its own independent model after the load, then processes in parallel.
+    yield f"data: {json.dumps({'status': 'starting'})}\n\n"
+
+    def _load_yolo():
+        with _yolo_load_lock:
+            return _YOLO(ml_models["yolo_path"])
+    yolo_model = await asyncio.to_thread(_load_yolo)
     gru_model  = ml_models["gru"]
     scaler     = ml_models["scaler"]
     encoder    = ml_models["encoder"]
@@ -44,6 +61,7 @@ async def stream_crowd_predictions(video_path: str, ml_models: dict, horizon_sec
         "frame_counts": [], "speeds_buf": [], "stagnant_buf": [], "directions_buf": [],
         "current_sec_ids": set(), "prev_sec_ids": set(),
         "raw_feature_history": [],
+        "positions": [],
         "frame_id": 0, "second_idx": 0,
     }
 
@@ -52,17 +70,26 @@ async def stream_crowd_predictions(video_path: str, ml_models: dict, horizon_sec
         Runs in a thread (via asyncio.to_thread).
         Reads frames until one full video-second has been aggregated,
         then returns the payload dict (or None if the video ended).
+        For RTSP sources a failed read triggers one reconnect attempt.
         """
         while True:
-            ret, frame = cap.read()
+            ret, frame = cap_ref[0].read()
             if not ret:
-                return None  # video finished
+                if is_rtsp:
+                    cap_ref[0].release()
+                    time.sleep(2)
+                    cap_ref[0] = cv2.VideoCapture(video_path)
+                    if not cap_ref[0].isOpened():
+                        return None          # camera truly unreachable
+                    return {"_reconnecting": True}
+                return None                  # video file ended
 
             s["frame_id"] += 1
             if s["frame_id"] % 5 != 0:
                 continue
 
             results = yolo_model.track(frame, persist=True, classes=[0], verbose=False)
+            s["positions"] = []
 
             n_frame = 0
             stag_frame = 0
@@ -70,12 +97,18 @@ async def stream_crowd_predictions(video_path: str, ml_models: dict, horizon_sec
             if results[0].boxes is not None and results[0].boxes.id is not None:
                 boxes_xyxy = results[0].boxes.xyxy.cpu().numpy().astype(int)
                 track_ids  = results[0].boxes.id.cpu().numpy().astype(int)
+                frame_positions = []
 
                 for box, tid in zip(boxes_xyxy, track_ids):
                     l, t_, r, b = box
                     cx, cy = (l + r) // 2, (t_ + b) // 2
                     n_frame += 1
                     s["current_sec_ids"].add(tid)
+                    frame_positions.append({
+                        "id": int(tid),
+                        "x": round(cx / max(frame_w, 1), 4),
+                        "y": round(cy / max(frame_h, 1), 4),
+                    })
 
                     if tid in s["prev_pos"]:
                         px, py = s["prev_pos"][tid]
@@ -97,6 +130,8 @@ async def stream_crowd_predictions(video_path: str, ml_models: dict, horizon_sec
                         s["track_side"][tid] = cur_side
                     if s["track_side"][tid] != cur_side:
                         s["track_side"][tid] = cur_side
+
+                s["positions"] = frame_positions
 
             s["frame_counts"].append(n_frame)
             s["stagnant_buf"].append(stag_frame)
@@ -143,7 +178,16 @@ async def stream_crowd_predictions(video_path: str, ml_models: dict, horizon_sec
                 # Still warming up — return a warmup message and come back next second
                 return {
                     "_warmup": True,
-                    "seconds_left": 6 - len(s["raw_feature_history"])
+                    "seconds_left": 6 - len(s["raw_feature_history"]),
+                    "second": s["second_idx"],
+                    "current_count": round(feat_dict["people_count"], 1),
+                    "density": round(feat_dict["density"], 3),
+                    "avg_speed": round(feat_dict["avg_speed_mps"], 2),
+                    "stagnation": round(feat_dict["stagnation_ratio"], 2),
+                    "forecast_horizon": horizon_sec,
+                    "confidence_score": round(len(s["raw_feature_history"]) / 6.0, 3),
+                    "positions": s["positions"],
+                    "timestamp": time.time(),
                 }
 
             # ── GRU prediction ───────────────────────────────────────────────
@@ -176,6 +220,7 @@ async def stream_crowd_predictions(video_path: str, ml_models: dict, horizon_sec
                 "forecast_horizon":    horizon_sec,
                 "predicted_risk_level": classes[class_idx],
                 "confidence_score":    round(float(probs[class_idx]), 3),
+                "positions":           s["positions"],
                 "timestamp":           time.time(),
             }
 
@@ -187,13 +232,18 @@ async def stream_crowd_predictions(video_path: str, ml_models: dict, horizon_sec
             result = await asyncio.to_thread(_process_one_second)
 
             if result is None:
-                break  # video ended
+                break  # video ended or RTSP permanently unreachable
+
+            if result.get("_reconnecting"):
+                yield f"data: {json.dumps({'status': 'reconnecting'})}\n\n"
+                continue
 
             if result.get("_warmup"):
-                yield f"data: {json.dumps({'status': 'warming_up', 'seconds_left': result['seconds_left']})}\n\n"
+                result["status"] = "warming_up"
+                yield f"data: {json.dumps(result)}\n\n"
                 continue
 
             yield f"data: {json.dumps(result)}\n\n"
 
     finally:
-        cap.release()
+        cap_ref[0].release()

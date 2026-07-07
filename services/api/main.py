@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
         import torch
         torch.set_num_threads(1)  # 1 intra-op thread per zone → zones run on separate CPU cores in parallel
         from ultralytics import YOLO
-        yolo_path = os.path.join(models_dir, "yolov8n.pt")
+        yolo_path = os.path.join(models_dir, "yolov8n_best.pt")
         ml_models["yolo"] = YOLO(yolo_path)
         ml_models["yolo_path"] = yolo_path
         

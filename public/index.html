@@ -247,8 +247,8 @@ body::before {
 .sim-zone-name { font-weight: 600; color: var(--text-bright); margin-bottom: 4px; font-size: 0.8rem; }
 .sim-zone-score { font-family: var(--font-mono); font-size: 0.9rem; font-weight: bold; }
 
-/* FLOW VISUALIZATION — GRID SQUARES */
-#flow-canvas { width: 100%; height: 340px; display: block; border-radius: 6px; }
+/* FLOW VISUALIZATION — SFM AGENT CANVAS */
+#flow-canvas { width: 100%; height: 380px; display: block; border-radius: 6px; background: #080c12; }
 .flow-legend {
   display: flex; align-items: center; gap: 6px; margin-top: 10px;
   font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-dim); flex-wrap: wrap;
@@ -420,6 +420,40 @@ body::before {
   padding: 10px 14px;
   background: rgba(0,212,255,0.03); border-top: 1px solid var(--border);
 }
+.dt-zone-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 14px;
+}
+.dt-zone-card {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.dt-zone-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.dt-zone-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--text-bright);
+}
+.dt-zone-meta {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--text-dim);
+}
+.dt-zone-canvas {
+  width: 100%;
+  height: 260px;
+  display: block;
+  background: #050b12;
+}
 </style>
 </head>
 <body>
@@ -474,15 +508,48 @@ body::before {
 
     <div class="panel" id="pipeline-panel" style="margin-bottom:16px">
       <div class="panel-header">
-        <div class="panel-title"><div class="panel-title-dot"></div>AI Engine Core Pipeline Controls — Upload per Zone</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button id="start-pipeline-btn" class="start-btn" onclick="uploadAllVideos()" disabled>▶ Start All Predictions</button>
-          <button id="stop-pipeline-btn" class="stop-btn" onclick="stopPipeline()" style="display:none">■ Stop All</button>
-        </div>
+        <div class="panel-title"><div class="panel-title-dot"></div>AI Engine — Pipeline Controls</div>
       </div>
       <div class="panel-body">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px" id="zone-upload-grid"></div>
-        <div style="margin-top:10px;font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim)" id="upload-status-line">Select videos for one or more zones, then click Start All Predictions.</div>
+
+        <!-- ── TWO SIDE-BY-SIDE ACTION ROWS ─────────────────────────────── -->
+        <div style="display:grid;grid-template-columns:1fr auto;gap:0;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:14px;align-items:center">
+
+          <!-- LEFT: Upload video flow -->
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);letter-spacing:1px">OPTION 1</div>
+            <div style="font-size:0.85rem;color:var(--text-bright);font-weight:600">Upload Zone Videos</div>
+            <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim)" id="upload-status-line">Select video files below per zone, then click ▶ Start.</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button id="start-pipeline-btn" class="start-btn" onclick="uploadAllVideos()" disabled>▶ Start All Predictions</button>
+            <button id="stop-pipeline-btn" class="stop-btn" onclick="stopPipeline()" style="display:none">■ Stop All</button>
+          </div>
+        </div>
+
+        <!-- Zone upload cards (unchanged) -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:16px" id="zone-upload-grid"></div>
+
+        <!-- ── DIVIDER ───────────────────────────────────────────────────── -->
+        <div style="border-top:1px solid var(--border2);margin-bottom:14px;padding-top:14px;display:grid;grid-template-columns:1fr auto;gap:0;align-items:center">
+
+          <!-- LEFT: Live RTSP description -->
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);letter-spacing:1px">OPTION 2</div>
+            <div style="font-size:0.85rem;color:var(--text-bright);font-weight:600">Test Live — RTSP Camera</div>
+            <select id="live-zone-select" class="zone-select-upload" style="padding:4px 8px;font-size:0.78rem">
+              <option>Gate A</option><option>Gate B</option><option>Main Hall</option><option>Concourse</option>
+            </select>
+            <span id="live-status-text" style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim)">RTSP camera ready</span>
+          </div>
+
+          <!-- RIGHT: RTSP buttons -->
+          <div style="display:flex;gap:8px;align-items:center">
+            <button id="live-start-btn" class="start-btn" style="background:rgba(0,212,255,0.1);border-color:var(--accent)" onclick="testLive()">📡 Connect RTSP &amp; Start</button>
+            <button id="live-stop-btn" class="stop-btn" onclick="stopLive()" style="display:none">■ Stop Live</button>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -569,18 +636,17 @@ body::before {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title"><div class="panel-title-dot"></div>Crowd Flow Simulation</div>
+          <div class="panel-title"><div class="panel-title-dot"></div>Social Force Model — Live Agent Simulation</div>
           <div id="flow-scenario-badge" class="flow-scenario-label" style="display:none">IDLE</div>
         </div>
         <div class="panel-body">
           <canvas id="flow-canvas"></canvas>
           <div class="flow-legend">
-            <div class="flow-legend-swatch" style="background:#00ff88"></div><span>Safe (&lt;1.0)</span>
-            <div class="flow-legend-swatch" style="background:#88ee00;margin-left:6px"></div><span>Low (1–2)</span>
-            <div class="flow-legend-swatch" style="background:#ffcc00;margin-left:6px"></div><span>Moderate (2–3)</span>
-            <div class="flow-legend-swatch" style="background:#ff7700;margin-left:6px"></div><span>High (3–5)</span>
-            <div class="flow-legend-swatch" style="background:#ff2244;margin-left:6px"></div><span>Critical (&gt;5)</span>
-            <span style="margin-left:10px;opacity:0.6">↑↓←→ = flow direction</span>
+            <div class="flow-legend-swatch" style="background:#00cc55"></div><span>Slow (&lt;0.5 m/s)</span>
+            <div class="flow-legend-swatch" style="background:#ffaa00;margin-left:6px"></div><span>Medium (0.5–1.2)</span>
+            <div class="flow-legend-swatch" style="background:#ff2244;margin-left:6px"></div><span>Fast (&gt;1.2 m/s)</span>
+            <div class="flow-legend-swatch" style="background:#4466ff;margin-left:6px;border-radius:0;height:3px;width:14px"></div><span>Walls / Barriers</span>
+            <span style="margin-left:10px;opacity:0.6">Arrows = velocity · Click a scenario above to start</span>
           </div>
         </div>
       </div>
@@ -592,62 +658,21 @@ body::before {
       </div>
     </div>
 
-    <!-- ── VID-TWIN LIVE ANALYTICS SUBSECTION ─────────────────────────────── -->
+    <!-- ── FOUR-ZONE LIVE DOT DIGITAL TWIN ────────────────────────────────── -->
     <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
-      <div class="section-title" style="margin-bottom:12px">Live Analytics — Uploaded Video</div>
+      <div class="section-title" style="margin-bottom:12px">Live Four-Zone Dot Digital Twin</div>
 
       <div class="panel" id="vt-panel">
         <div class="panel-header">
           <div class="panel-title">
             <div class="panel-title-dot" style="background:var(--accent);animation:pulse 1.5s infinite"></div>
-            Detection + Digital Twin — Video Feed
+            Movement Dots From Active Prediction Streams
           </div>
-          <span class="badge" id="vt-status-badge" style="background:rgba(90,138,170,0.15);color:var(--text-dim);border:1px solid var(--border2)">IDLE</span>
+          <span class="badge" id="vt-status-badge" style="background:rgba(90,138,170,0.15);color:var(--text-dim);border:1px solid var(--border2)">WAITING</span>
         </div>
 
-        <div class="vt-upload-row">
-          <div>
-            <div class="field-label">CCTV Video Feed</div>
-            <label class="file-upload-label" for="vt-video-input">
-              📁 Choose Video
-              <input type="file" id="vt-video-input" accept="video/*" style="display:none" onchange="vtOnVideoSelect(this)"/>
-            </label>
-            <div id="vt-filename" style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-dim);margin-top:4px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">No file selected</div>
-          </div>
-          <button id="vt-start-btn" class="start-btn" onclick="vtUpload()" disabled>&#9654; Start Live Analytics</button>
-          <button id="vt-stop-btn" class="stop-btn" onclick="vtStop()" style="display:none">&#9632; Stop</button>
-        </div>
-
-        <div class="vt-streams">
-          <!-- ROW 1: Full-width Detection Video -->
-          <div class="vt-stream-card full-width">
-            <div class="vt-stream-title"><div class="vt-stream-title-dot"></div>Detection Video — Zone Split View (6 Zones)</div>
-            <div class="vt-placeholder" id="vt-video-placeholder"><span class="vt-placeholder-icon">&#127909;</span>Upload a video to start detection</div>
-            <img class="vt-img" id="vt-video-img" style="display:none" alt="Detection Video Stream"/>
-          </div>
-          <!-- ROW 2: Zone Twin + Dot Grid side by side -->
-          <div class="vt-stream-card">
-            <div class="vt-stream-title"><div class="vt-stream-title-dot" style="background:var(--yellow)"></div>Zone Twin — Crowd Density Map</div>
-            <div class="vt-placeholder" id="vt-zone-placeholder"><span class="vt-placeholder-icon">&#128506;</span>Zone density map will appear here</div>
-            <img class="vt-img" id="vt-zone-img" style="display:none" alt="Zone Twin Stream"/>
-          </div>
-          <div class="vt-stream-card">
-            <div class="vt-stream-title"><div class="vt-stream-title-dot" style="background:var(--orange)"></div>Dot Twin — 20×20 Density Grid</div>
-            <div class="vt-placeholder" id="vt-dot-placeholder"><span class="vt-placeholder-icon">&#128997;</span>Density grid will appear here</div>
-            <img class="vt-img" id="vt-dot-img" style="display:none" alt="Dot Twin Stream"/>
-          </div>
-          <!-- ROW 3: Full-width Crowd Count Graph -->
-          <div class="vt-stream-card full-width">
-            <div class="vt-stream-title"><div class="vt-stream-title-dot" style="background:var(--green)"></div>Crowd Count History — Time Series Graph</div>
-            <div class="vt-placeholder" id="vt-graph-placeholder"><span class="vt-placeholder-icon">&#128200;</span>Crowd count history graph will appear here</div>
-            <img class="vt-img" id="vt-graph-img" style="display:none" alt="Crowd Graph Stream"/>
-          </div>
-        </div>
-
-        <div class="vt-stats-strip" id="vt-stats-strip" style="display:none">
-          <div class="lm-item"><div class="lm-label">Total Detected</div><div class="lm-value" id="vt-count">&#8212;</div></div>
-          <div class="lm-item"><div class="lm-label">Frame #</div><div class="lm-value" style="color:var(--text-dim);font-size:0.8rem" id="vt-frame">&#8212;</div></div>
-          <div class="lm-item"><div class="lm-label">Status</div><div class="lm-value" id="vt-status-txt" style="font-size:0.8rem">&#8212;</div></div>
+        <div class="panel-body">
+          <div class="dt-zone-grid" id="dt-zone-grid"></div>
         </div>
       </div>
     </div>
@@ -708,12 +733,13 @@ body::before {
 
 </main>
 <script>
-const STATIC_ZONES = ['Gate A', 'Gate B', 'Main Hall', 'North Wing', 'South Wing', 'Exit 1', 'Exit 2', 'Concourse'];
+const STATIC_ZONES = ['Gate A', 'Gate B', 'Main Hall', 'Concourse'];
 let zoneFiles = {};          // { zoneName: File }
 let eventSources = {};       // { zoneName: EventSource }
 let zoneHistory = {};
 let latestZoneData = {};
 let vtPollInterval = null;
+let liveZone = null;  // which zone card the RTSP stream is currently targeting
 
 // Build per-zone upload cards and zone matrix cards on page load
 function initializeMatrixGrid() {
@@ -733,6 +759,7 @@ function initializeMatrixGrid() {
           <div>
             <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim);margin-bottom:4px;">CURRENT STATUS</div>
             <div style="font-size:1.1rem;font-weight:bold;" id="curr-count-${zid}">👥 -- People</div>
+            <div style="font-size:0.85rem;color:var(--text);" id="curr-density-${zid}">Density: -- p/m²</div>
             <div style="font-size:0.85rem;color:var(--text);" id="curr-speed-${zid}">📉 Speed: -- m/s</div>
           </div>
           <div style="border-left:1px solid var(--border);padding-left:12px;">
@@ -796,7 +823,11 @@ async function uploadAllVideos() {
   startBtn.textContent = `⏳ Uploading ${zonesToRun.length} zone(s)...`;
   document.getElementById('upload-status-line').textContent = `Uploading ${zonesToRun.length} video(s) and starting predictions simultaneously...`;
 
-  // Upload all selected videos in parallel, then open one SSE stream per zone
+  const uploadedStreams = [];
+
+  // Upload all selected videos in parallel first. Streams are opened only after
+  // every selected zone has a backend video path, so zones enter processing
+  // together instead of whichever upload finishes first.
   const uploads = zonesToRun.map(async zone => {
     const zid = zone.replace(/\s+/g, '-');
     document.getElementById(`upload-state-${zid}`).textContent = 'UPLOADING...';
@@ -805,10 +836,11 @@ async function uploadAllVideos() {
     fd.append('zone', zone);
     try {
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      if (!res.ok) throw new Error(`Upload failed for ${zone}`);
       const data = await res.json();
-      document.getElementById(`upload-state-${zid}`).textContent = 'STREAMING';
+      uploadedStreams.push({ zone, videoPath: data.video_path });
+      document.getElementById(`upload-state-${zid}`).textContent = 'QUEUED';
       document.getElementById(`upload-card-${zid}`).style.borderColor = '#00ff88';
-      openZoneStream(zone, data.video_path);
     } catch(e) {
       document.getElementById(`upload-state-${zid}`).textContent = 'ERROR';
       document.getElementById(`upload-card-${zid}`).style.borderColor = 'var(--red)';
@@ -817,34 +849,87 @@ async function uploadAllVideos() {
 
   await Promise.allSettled(uploads);
 
+  if (uploadedStreams.length === 0) {
+    startBtn.disabled = false;
+    startBtn.textContent = '▶ Start All Predictions';
+    document.getElementById('upload-status-line').textContent = 'Upload failed. Please check the selected files and try again.';
+    return;
+  }
+
+  document.getElementById('upload-status-line').textContent = `Opening ${uploadedStreams.length} prediction stream(s) together...`;
+  uploadedStreams.forEach(({ zone, videoPath }) => {
+    const zid = zone.replace(/\s+/g, '-');
+    document.getElementById(`upload-state-${zid}`).textContent = 'CONNECTING...';
+    openZoneStream(zone, videoPath);
+  });
+
   document.getElementById('stop-pipeline-btn').style.display = 'inline-flex';
   startBtn.style.display = 'none';
-  document.getElementById('upload-status-line').textContent = `${zonesToRun.length} zone(s) streaming live.`;
+  document.getElementById('upload-status-line').textContent = `${uploadedStreams.length} zone(s) streaming live.`;
 }
 
-function openZoneStream(zone, videoPath) {
-  // Close existing stream for this zone if any
+// streamUrl — optional: pass the full SSE URL directly (used by testLive for RTSP).
+// When null, constructs the standard upload-video URL from videoPath (unchanged behaviour).
+function openZoneStream(zone, videoPath, streamUrl = null) {
   if (eventSources[zone]) { eventSources[zone].close(); delete eventSources[zone]; }
   const zid = zone.replace(/\s+/g, '-');
 
-  const es = new EventSource(`http://127.0.0.1:8000/api/v1/analytics/stream?video_path=${encodeURIComponent(videoPath)}`);
+  const url = streamUrl || `http://127.0.0.1:8000/api/v1/analytics/stream?video_path=${encodeURIComponent(videoPath)}`;
+  const es = new EventSource(url);
   eventSources[zone] = es;
+
+  function updateZoneTile(data, color = 'var(--accent)') {
+    if (typeof data.current_count === 'number') {
+      document.getElementById(`curr-count-${zid}`).textContent = `👥 ${Math.round(data.current_count)} People`;
+    }
+    if (typeof data.density === 'number') {
+      document.getElementById(`curr-density-${zid}`).textContent = `Density: ${data.density.toFixed(3)} p/m²`;
+    }
+    if (typeof data.avg_speed === 'number') {
+      document.getElementById(`curr-speed-${zid}`).textContent = `📉 Speed: ${data.avg_speed.toFixed(2)} m/s`;
+    }
+    if (typeof data.stagnation === 'number') {
+      document.getElementById(`fore-stag-${zid}`).textContent = `⚠️ Stag: ${Math.round(data.stagnation * 100)}%`;
+    }
+    if (typeof data.confidence_score === 'number') {
+      const pct = Math.round(data.confidence_score * 100);
+      document.getElementById(`conf-val-${zid}`).textContent = `${pct}%`;
+      document.getElementById(`conf-bar-${zid}`).style.width = `${pct}%`;
+      document.getElementById(`conf-bar-${zid}`).style.backgroundColor = color;
+    }
+  }
 
   es.onmessage = function(event) {
     const data = JSON.parse(event.data);
 
-    // Warmup messages don't have prediction fields — show status and wait
-    if (data.status === 'warming_up') {
-      document.getElementById(`badge-${zid}`).textContent = `⏳ WARMUP ${data.seconds_left}s`;
-      document.getElementById(`upload-state-${zid}`).textContent = `WARMUP (${data.seconds_left}s left)`;
+    if (data.status === 'starting') {
+      document.getElementById(`badge-${zid}`).textContent = '⏳ STARTING';
+      const st = document.getElementById(`upload-state-${zid}`);
+      if (st) st.textContent = 'STARTING MODEL';
       return;
     }
 
-    if (!data.predicted_risk_level) return; // skip any other non-prediction messages
+    if (data.status === 'warming_up') {
+      document.getElementById(`badge-${zid}`).textContent = `⏳ WARMUP ${data.seconds_left}s`;
+      const st = document.getElementById(`upload-state-${zid}`);
+      if (st) st.textContent = `WARMUP (${data.seconds_left}s left)`;
+      updateZoneTile(data, '#ffcc00');
+      updateDigitalTwinZone(zone, data);
+      return;
+    }
+
+    if (data.status === 'reconnecting') {
+      document.getElementById(`badge-${zid}`).textContent = '🔄 RECONNECTING';
+      document.getElementById('live-status-text').textContent = 'RTSP dropped — reconnecting...';
+      return;
+    }
+
+    if (!data.predicted_risk_level) return;
 
     if (!zoneHistory[zone]) zoneHistory[zone] = [];
     zoneHistory[zone].push({...data, ts: Date.now()});
     latestZoneData[zone] = data;
+    updateDigitalTwinZone(zone, data);
 
     const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
     const col = riskColors[data.predicted_risk_level] || 'var(--accent)';
@@ -852,24 +937,26 @@ function openZoneStream(zone, videoPath) {
     document.getElementById(`badge-${zid}`).textContent = '● LIVE';
     document.getElementById(`badge-${zid}`).style.background = 'rgba(0,255,136,0.15)';
     document.getElementById(`badge-${zid}`).style.color = '#00ff88';
-    document.getElementById(`upload-state-${zid}`).textContent = 'STREAMING';
+    const _st = document.getElementById(`upload-state-${zid}`);
+    if (_st) _st.textContent = 'STREAMING';
     document.getElementById(`card-${zid}`).style.borderColor = col;
-    document.getElementById(`curr-count-${zid}`).textContent = `👥 ${Math.round(data.current_count)} People`;
-    document.getElementById(`curr-speed-${zid}`).textContent = `📉 Speed: ${data.avg_speed.toFixed(2)} m/s`;
+    updateZoneTile(data, col);
     document.getElementById(`fore-risk-${zid}`).textContent = data.predicted_risk_level.toUpperCase();
     document.getElementById(`fore-risk-${zid}`).style.color = col;
-    document.getElementById(`fore-stag-${zid}`).textContent = `⚠️ Stag: ${Math.round(data.stagnation * 100)}%`;
-    const pct = Math.round(data.confidence_score * 100);
-    document.getElementById(`conf-val-${zid}`).textContent = `${pct}%`;
-    document.getElementById(`conf-bar-${zid}`).style.width = `${pct}%`;
-    document.getElementById(`conf-bar-${zid}`).style.backgroundColor = col;
   };
 
   es.onerror = function() {
-    document.getElementById(`upload-state-${zid}`).textContent = 'DONE';
+    const st = document.getElementById(`upload-state-${zid}`);
+    if (st) st.textContent = 'DONE';
     document.getElementById(`badge-${zid}`).textContent = 'DONE';
     es.close();
     delete eventSources[zone];
+    if (zone === liveZone) {
+      liveZone = null;
+      document.getElementById('live-start-btn').style.display = 'inline-flex';
+      document.getElementById('live-stop-btn').style.display = 'none';
+      document.getElementById('live-status-text').textContent = 'Stream ended — click Connect to restart.';
+    }
   };
 }
 
@@ -898,6 +985,8 @@ async function stopPipeline() {
 window.addEventListener('load', () => {
   document.getElementById('loader').style.display = 'none';
   initializeMatrixGrid();
+  ensureDigitalTwinGrid();
+  startDigitalTwinGrid();
 });
 // ── TAB NAVIGATION ────────────────────────────────────────────────────────────
 function showPage(pageName) {
@@ -908,6 +997,7 @@ function showPage(pageName) {
   if (pageName === 'predictions') loadPredictions();
   if (pageName === 'alerts') loadAlerts();
   if (pageName === 'postEvent') loadPostEvent();
+  if (pageName === 'simulation') startDigitalTwinGrid();
 }
 
 // ── PREDICTIONS TAB ───────────────────────────────────────────────────────────
@@ -1086,6 +1176,9 @@ async function runSim(scenario, btn) {
   badge.textContent = scenario.toUpperCase().replace('_', ' ');
   document.getElementById('sim-result-title').textContent = 'RUNNING SIMULATION...';
 
+  // Start SFM animation immediately — no server needed
+  startSFM(scenario);
+
   try {
     const res = await fetch('http://127.0.0.1:8000/api/v1/analytics/simulate', {
       method: 'POST',
@@ -1095,7 +1188,7 @@ async function runSim(scenario, btn) {
     const data = await res.json();
     renderSimResults(data);
   } catch(e) {
-    document.getElementById('sim-result-title').textContent = 'SIMULATION ERROR — Is FastAPI running?';
+    document.getElementById('sim-result-title').textContent = 'SFM running · FastAPI offline — zone scores unavailable';
   }
   document.querySelectorAll('.sim-btn').forEach(b => { b.style.opacity = '1'; b.style.outline = 'none'; });
 }
@@ -1121,108 +1214,349 @@ function renderSimResults(data) {
   drawFlowCanvas(data.zones);
 }
 
-function drawFlowCanvas(zones) {
-  const canvas = document.getElementById('flow-canvas');
-  if (!canvas) return;
-  canvas.width = canvas.parentElement.clientWidth - 32;
-  canvas.height = 200;
-  const ctx = canvas.getContext('2d');
-  const cols = 4, rows = 2;
-  const cw = canvas.width / cols, ch = canvas.height / rows;
-  const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
-  zones.forEach((z, i) => {
-    const col = i % cols, row = Math.floor(i / cols);
-    const x = col * cw, y = row * ch;
-    ctx.fillStyle = riskColors[z.risk] + '33';
-    ctx.strokeStyle = riskColors[z.risk];
-    ctx.lineWidth = 1;
-    ctx.fillRect(x+4, y+4, cw-8, ch-8);
-    ctx.strokeRect(x+4, y+4, cw-8, ch-8);
-    ctx.fillStyle = riskColors[z.risk];
-    ctx.font = 'bold 11px Rajdhani';
-    ctx.textAlign = 'center';
-    ctx.fillText(z.name, x + cw/2, y + ch/2 - 8);
-    ctx.font = 'bold 16px Exo 2';
-    ctx.fillText(z.score, x + cw/2, y + ch/2 + 10);
-  });
+// ═══════════════════════════════════════════════════════════════════════
+//  SOCIAL FORCE MODEL — ported from crowd_digital_twin.py
+// ═══════════════════════════════════════════════════════════════════════
+const _SFM = {
+  DT:0.05, MASS:80, TAU:0.5,
+  A:2000, B:0.08, AW:1500, BW:0.05,
+  DESIRE:1.4, R:0.3,
+  W:40, H:24   // arena metres
+};
+
+let _sfmAgents=[], _sfmWalls=[], _sfmWalls2=null;
+let _sfmLabel='', _sfmFrame=0, _sfmDesire=_SFM.DESIRE;
+let _sfmExtra=false, _sfmRAF=null, _sfmScenario=null;
+
+class _Agent {
+  constructor(x,y,gx,gy){ this.p=[x,y]; this.v=[0,0]; this.g=[gx,gy]; this.on=true; }
 }
 
-// ── DIGITAL TWIN — VID-TWIN LIVE STREAMS ─────────────────────────────────────
-let vtSelectedFile = null;
+function _rand(a,b){ return a+Math.random()*(b-a); }
+function _agents(n,sx,sy,gx,gy){
+  const r=[];
+  for(let i=0;i<n;i++) r.push(new _Agent(_rand(...sx),_rand(...sy),_rand(...gx),_rand(...gy)));
+  return r;
+}
 
-function vtOnVideoSelect(input) {
-  vtSelectedFile = input.files[0];
-  if (vtSelectedFile) {
-    document.getElementById('vt-filename').textContent = vtSelectedFile.name;
-    document.getElementById('vt-start-btn').disabled = false;
+function _sfmTick(){
+  const active=_sfmAgents.filter(a=>a.on);
+  for(let i=0;i<active.length;i++){
+    const ag=active[i];
+    const dx=ag.g[0]-ag.p[0], dy=ag.g[1]-ag.p[1];
+    const d=Math.sqrt(dx*dx+dy*dy);
+    if(d<0.5){ ag.on=false; ag.v=[0,0]; continue; }
+    const ex=dx/d, ey=dy/d;
+    let fx=(_SFM.MASS/_SFM.TAU)*(_sfmDesire*ex-ag.v[0]);
+    let fy=(_SFM.MASS/_SFM.TAU)*(_sfmDesire*ey-ag.v[1]);
+    // pedestrian repulsion
+    for(let j=0;j<active.length;j++){
+      if(i===j) continue;
+      const o=active[j];
+      let ex2=ag.p[0]-o.p[0], ey2=ag.p[1]-o.p[1];
+      let dd=Math.sqrt(ex2*ex2+ey2*ey2)||1e-6;
+      const m=_SFM.A*Math.exp((_SFM.R*2-dd)/_SFM.B);
+      fx+=m*ex2/dd; fy+=m*ey2/dd;
+    }
+    // wall repulsion
+    for(const [wx1,wy1,wx2,wy2] of _sfmWalls){
+      const wdx=wx2-wx1, wdy=wy2-wy1, wl2=wdx*wdx+wdy*wdy;
+      if(wl2<1e-12) continue;
+      let t=((ag.p[0]-wx1)*wdx+(ag.p[1]-wy1)*wdy)/wl2;
+      t=Math.max(0,Math.min(1,t));
+      const cx=wx1+t*wdx, cy=wy1+t*wdy;
+      let ex2=ag.p[0]-cx, ey2=ag.p[1]-cy;
+      let dw=Math.sqrt(ex2*ex2+ey2*ey2)||1e-6;
+      const m=_SFM.AW*Math.exp((_SFM.R-dw)/_SFM.BW);
+      fx+=m*ex2/dw; fy+=m*ey2/dw;
+    }
+    ag.v[0]+=(fx/_SFM.MASS)*_SFM.DT; ag.v[1]+=(fy/_SFM.MASS)*_SFM.DT;
+    const spd=Math.sqrt(ag.v[0]**2+ag.v[1]**2);
+    if(spd>3.5){ag.v[0]=ag.v[0]/spd*3.5; ag.v[1]=ag.v[1]/spd*3.5;}
+    ag.p[0]+=ag.v[0]*_SFM.DT; ag.p[1]+=ag.v[1]*_SFM.DT;
   }
 }
 
-async function vtUpload() {
-  if (!vtSelectedFile) return;
-  document.getElementById('vt-start-btn').disabled = true;
-  document.getElementById('vt-status-badge').textContent = 'UPLOADING...';
+function _sfmDraw(){
+  const canvas=document.getElementById('flow-canvas');
+  if(!canvas) return;
+  const cw=canvas.width, ch=canvas.height;
+  const sx=cw/_SFM.W, sy=ch/_SFM.H;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#080c12'; ctx.fillRect(0,0,cw,ch);
+  // grid
+  ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
+  for(let x=0;x<cw;x+=sx){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,ch);ctx.stroke();}
+  for(let y=0;y<ch;y+=sy){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cw,y);ctx.stroke();}
+  // walls
+  ctx.strokeStyle='#4466ff'; ctx.lineWidth=3;
+  for(const [wx1,wy1,wx2,wy2] of _sfmWalls){
+    ctx.beginPath(); ctx.moveTo(wx1*sx,wy1*sy); ctx.lineTo(wx2*sx,wy2*sy); ctx.stroke();
+  }
+  // agents
+  const R=Math.max(_SFM.R*sx,4);
+  for(const ag of _sfmAgents){
+    if(!ag.on) continue;
+    const px=ag.p[0]*sx, py=ag.p[1]*sy;
+    const spd=Math.sqrt(ag.v[0]**2+ag.v[1]**2);
+    const col=spd<0.5?'#00cc55':spd<1.2?'#ffaa00':'#ff2244';
+    ctx.beginPath(); ctx.arc(px,py,R,0,Math.PI*2);
+    ctx.fillStyle=col+'bb'; ctx.fill();
+    ctx.strokeStyle=col; ctx.lineWidth=1; ctx.stroke();
+    // arrow
+    if(spd>0.05){
+      const vl=16, vm=Math.sqrt(ag.v[0]**2+ag.v[1]**2);
+      const ex=ag.v[0]/vm, ey=ag.v[1]/vm;
+      const tx=px+ex*vl, ty=py+ey*vl;
+      ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(tx,ty);
+      ctx.strokeStyle=col+'88'; ctx.lineWidth=1.5; ctx.stroke();
+      const ah=5,aw=3;
+      ctx.beginPath();
+      ctx.moveTo(tx,ty);
+      ctx.lineTo(tx-ex*ah-ey*aw, ty-ey*ah+ex*aw);
+      ctx.lineTo(tx-ex*ah+ey*aw, ty-ey*ah-ex*aw);
+      ctx.closePath(); ctx.fillStyle=col+'88'; ctx.fill();
+    }
+  }
+  // HUD
+  const alive=_sfmAgents.filter(a=>a.on).length;
+  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(8,8,230,68);
+  ctx.textAlign='left';
+  ctx.fillStyle='#ffdd00'; ctx.font='bold 13px monospace'; ctx.fillText(_sfmLabel,14,26);
+  ctx.fillStyle='#aabbcc'; ctx.font='11px monospace';
+  ctx.fillText(`Active agents: ${alive}`,14,44);
+  ctx.fillText(`t = ${(_sfmFrame*_SFM.DT).toFixed(1)}s`,14,62);
+}
 
-  const fd = new FormData();
-  fd.append('video', vtSelectedFile);
+function _sfmLoop(){
+  const canvas=document.getElementById('flow-canvas');
+  if(!canvas) return;
+  canvas.width=canvas.offsetWidth||canvas.parentElement.clientWidth-32;
+  canvas.height=380;
+  const t=_sfmFrame*_SFM.DT;
+  // scenario events
+  if(_sfmScenario==='gate_closure'&&t>=5.0&&_sfmWalls2){_sfmWalls=_sfmWalls2;_sfmWalls2=null;}
+  if(_sfmScenario==='increased_inflow'&&t>=4.0&&!_sfmExtra){
+    _sfmAgents.push(..._agents(50,[0.5,3],[2,_SFM.H-2],[_SFM.W-2,_SFM.W-1],[2,_SFM.H-2]));
+    _sfmExtra=true;
+  }
+  if(_sfmScenario==='evacuation'&&!_sfmExtra){_sfmDesire=_SFM.DESIRE*2;_sfmExtra=true;}
+  _sfmTick(); _sfmFrame++;
+  if(_sfmAgents.every(a=>!a.on)) _sfmInit(_sfmScenario);  // auto-reset
+  _sfmDraw();
+  _sfmRAF=requestAnimationFrame(_sfmLoop);
+}
 
-  try {
-    const res = await fetch('/api/vid-twin/upload', { method: 'POST', body: fd });
-    const data = await res.json();
-    const port = data.port || 5004;
+function _sfmInit(scenario){
+  _sfmScenario=scenario; _sfmFrame=0; _sfmExtra=false; _sfmDesire=_SFM.DESIRE;
+  _sfmWalls2=null;
+  const H=_SFM.H, W=_SFM.W, gc=H/2;
+  if(scenario==='gate_closure'){
+    _sfmLabel='Gate-Close Scenario';
+    _sfmAgents=_agents(60,[1,15],[2,H-2],[W-1,W-0.5],[gc-2,gc+2]);
+    _sfmWalls=[[0,0,W,0],[0,H,W,H],[0,0,0,H],[W,0,W,gc-3],[W,gc+3,W,H]];
+    _sfmWalls2=[[0,0,W,0],[0,H,W,H],[0,0,0,H],[W,0,W,gc-1.5],[W,gc+1.5,W,H]];
+  } else if(scenario==='increased_inflow'){
+    _sfmLabel='Inflow-Surge Scenario';
+    _sfmAgents=_agents(30,[1,8],[2,H-2],[W-2,W-1],[2,H-2]);
+    _sfmWalls=[[0,0,W,0],[0,H,W,H],[0,0,0,H],[W,0,W,H/2-3],[W,H/2+3,W,H]];
+  } else {
+    _sfmLabel='Emergency Evacuation';
+    _sfmAgents=_agents(80,[5,W-5],[5,H-5],[W-1,W-0.5],[H-3,H-1]);
+    _sfmWalls=[[0,0,W,0],[0,H,W,H],[0,0,0,H],[W,0,W,H-4]];
+  }
+}
 
-    document.getElementById('vt-start-btn').style.display = 'none';
-    document.getElementById('vt-stop-btn').style.display = 'inline-flex';
-    document.getElementById('vt-status-badge').textContent = 'LOADING';
-    document.getElementById('vt-stats-strip').style.display = 'flex';
+function startSFM(scenario){
+  if(_sfmRAF){cancelAnimationFrame(_sfmRAF);_sfmRAF=null;}
+  _sfmInit(scenario);
+  _sfmLoop();
+}
 
-    // Point all img tags to MJPEG streams from vid_twin_api.py
-    const base = `http://localhost:${port}`;
-    ['video','zone','dot','graph'].forEach(kind => {
-      const img = document.getElementById(`vt-${kind}-img`);
-      const ph = document.getElementById(`vt-${kind}-placeholder`);
-      img.src = `${base}/stream/${kind}`;
-      img.style.display = 'block';
-      if (ph) ph.style.display = 'none';
+function drawFlowCanvas(zones){ /* replaced by SFM — called but intentionally empty */ }
+
+// ── FOUR-ZONE LIVE DOT DIGITAL TWIN ──────────────────────────────────────────
+let dtAnimationFrame = null;
+const dtState = {};
+
+function ensureDigitalTwinGrid() {
+  const grid = document.getElementById('dt-zone-grid');
+  if (!grid || grid.dataset.ready === '1') return;
+  grid.innerHTML = STATIC_ZONES.map((zone, index) => {
+    const zid = zone.replace(/\s+/g, '-');
+    const id = `Z${String(index + 1).padStart(2, '0')}`;
+    dtState[zone] = { dots: [], targetDots: [], lastCount: 0, lastSpeed: 0, status: 'WAITING' };
+    return `
+      <div class="dt-zone-card">
+        <div class="dt-zone-head">
+          <div class="dt-zone-name">${zone} <span class="dt-zone-meta">${id}</span></div>
+          <div class="dt-zone-meta" id="dt-meta-${zid}">waiting for stream</div>
+        </div>
+        <canvas class="dt-zone-canvas" id="dt-canvas-${zid}"></canvas>
+      </div>`;
+  }).join('');
+  grid.dataset.ready = '1';
+}
+
+function updateDigitalTwinZone(zone, data) {
+  ensureDigitalTwinGrid();
+  if (!dtState[zone]) return;
+  const incoming = Array.isArray(data.positions) ? data.positions : [];
+  const current = dtState[zone];
+  current.lastCount = typeof data.current_count === 'number' ? data.current_count : current.lastCount;
+  current.lastSpeed = typeof data.avg_speed === 'number' ? data.avg_speed : current.lastSpeed;
+  current.status = data.status === 'warming_up' ? 'WARMUP' : (data.predicted_risk_level || 'LIVE');
+  current.targetDots = incoming.map((p, i) => ({
+    id: p.id ?? i,
+    x: Math.max(0.02, Math.min(0.98, Number(p.x) || 0.5)),
+    y: Math.max(0.02, Math.min(0.98, Number(p.y) || 0.5)),
+  }));
+
+  if (!current.targetDots.length && current.lastCount > 0) {
+    const n = Math.min(80, Math.max(1, Math.round(current.lastCount)));
+    while (current.targetDots.length < n) {
+      current.targetDots.push({
+        id: current.targetDots.length,
+        x: 0.12 + Math.random() * 0.76,
+        y: 0.12 + Math.random() * 0.76,
+      });
+    }
+  }
+
+  const byId = new Map(current.dots.map(d => [d.id, d]));
+  current.dots = current.targetDots.map(t => {
+    const existing = byId.get(t.id);
+    if (existing) {
+      existing.tx = t.x;
+      existing.ty = t.y;
+      return existing;
+    }
+    return {
+      id: t.id,
+      x: t.x,
+      y: t.y,
+      tx: t.x,
+      ty: t.y,
+      vx: (Math.random() - 0.5) * 0.002,
+      vy: (Math.random() - 0.5) * 0.002,
+    };
+  });
+
+  const zid = zone.replace(/\s+/g, '-');
+  const meta = document.getElementById(`dt-meta-${zid}`);
+  if (meta) meta.textContent = `${Math.round(current.lastCount)} people · ${current.lastSpeed.toFixed(2)} m/s · ${current.status}`;
+  const badge = document.getElementById('vt-status-badge');
+  if (badge) badge.textContent = Object.values(dtState).some(s => s.dots.length) ? 'LIVE' : 'WAITING';
+}
+
+function drawDigitalTwinGrid() {
+  ensureDigitalTwinGrid();
+  STATIC_ZONES.forEach(zone => {
+    const zid = zone.replace(/\s+/g, '-');
+    const canvas = document.getElementById(`dt-canvas-${zid}`);
+    const state = dtState[zone];
+    if (!canvas || !state) return;
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(240, Math.round(rect.width));
+    const h = Math.max(220, Math.round(rect.height));
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#050b12';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.strokeStyle = 'rgba(0,212,255,0.08)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= w; x += w / 10) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    for (let y = 0; y <= h; y += h / 8) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+
+    state.dots.forEach(dot => {
+      const speedFactor = Math.max(0.03, Math.min(0.22, 0.05 + state.lastSpeed * 0.08));
+      dot.x += (dot.tx - dot.x) * speedFactor + dot.vx;
+      dot.y += (dot.ty - dot.y) * speedFactor + dot.vy;
+      if (Math.abs(dot.tx - dot.x) < 0.01) dot.vx += (Math.random() - 0.5) * 0.0008;
+      if (Math.abs(dot.ty - dot.y) < 0.01) dot.vy += (Math.random() - 0.5) * 0.0008;
+      dot.vx *= 0.96;
+      dot.vy *= 0.96;
+      dot.x = Math.max(0.02, Math.min(0.98, dot.x));
+      dot.y = Math.max(0.02, Math.min(0.98, dot.y));
+
+      const px = dot.x * w;
+      const py = dot.y * h;
+      ctx.beginPath();
+      ctx.arc(px, py, 3.3, 0, Math.PI * 2);
+      ctx.fillStyle = state.status === 'WARMUP' ? '#ffcc00' : '#00d4ff';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.stroke();
     });
 
-    // Poll status
-    vtPollInterval = setInterval(async () => {
-      try {
-        const s = await fetch('/api/vid-twin/status').then(r => r.json());
-        document.getElementById('vt-count').textContent = s.total_count ?? '—';
-        document.getElementById('vt-frame').textContent = s.frame_id ?? '—';
-        document.getElementById('vt-status-txt').textContent = (s.status || '—').toUpperCase();
-        document.getElementById('vt-status-badge').textContent = (s.status || 'LOADING').toUpperCase();
-      } catch(_) {}
-    }, 2000);
-  } catch(e) {
-    document.getElementById('vt-status-badge').textContent = 'ERROR';
-    document.getElementById('vt-start-btn').disabled = false;
-    alert('Vid-twin start failed: ' + e.message);
+    if (!state.dots.length) {
+      ctx.fillStyle = 'rgba(154,178,198,0.55)';
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('Waiting for this zone prediction stream', w / 2, h / 2);
+    }
+  });
+  dtAnimationFrame = requestAnimationFrame(drawDigitalTwinGrid);
+}
+
+function startDigitalTwinGrid() {
+  ensureDigitalTwinGrid();
+  if (!dtAnimationFrame) drawDigitalTwinGrid();
+}
+
+// ── TEST LIVE — RTSP ──────────────────────────────────────────────────────────
+function testLive() {
+  const zone = document.getElementById('live-zone-select').value;
+
+  // Close any previous live stream on a different zone first
+  if (liveZone && liveZone !== zone && eventSources[liveZone]) {
+    eventSources[liveZone].close();
+    delete eventSources[liveZone];
+    const oldZid = liveZone.replace(/\s+/g, '-');
+    const ob = document.getElementById(`badge-${oldZid}`);
+    if (ob) { ob.textContent = 'OFFLINE'; ob.style.background = 'rgba(90,138,170,0.15)'; ob.style.color = 'var(--text-dim)'; }
+  }
+
+  liveZone = zone;
+  document.getElementById('live-start-btn').style.display = 'none';
+  document.getElementById('live-stop-btn').style.display = 'inline-flex';
+  document.getElementById('live-status-text').textContent = `Connecting → ${zone} (RTSP)…`;
+
+  // Reuse the exact same pipeline endpoint — only the source URL differs
+  openZoneStream(zone, null, 'http://127.0.0.1:8000/api/v1/analytics/live');
+
+  document.getElementById('live-status-text').textContent = `Live — ${zone} (warming up 6s…)`;
+}
+
+function stopLive() {
+  if (liveZone && eventSources[liveZone]) {
+    eventSources[liveZone].close();
+    delete eventSources[liveZone];
+  }
+  const prevZone = liveZone;
+  liveZone = null;
+  document.getElementById('live-start-btn').style.display = 'inline-flex';
+  document.getElementById('live-stop-btn').style.display = 'none';
+  document.getElementById('live-status-text').textContent = 'RTSP camera ready';
+  if (prevZone) {
+    const zid = prevZone.replace(/\s+/g, '-');
+    const b = document.getElementById(`badge-${zid}`);
+    const c = document.getElementById(`card-${zid}`);
+    if (b) { b.textContent = 'OFFLINE'; b.style.background = 'rgba(90,138,170,0.15)'; b.style.color = 'var(--text-dim)'; }
+    if (c) c.style.borderColor = 'var(--border)';
   }
 }
-
-async function vtStop() {
-  if (vtPollInterval) { clearInterval(vtPollInterval); vtPollInterval = null; }
-  await fetch('/api/vid-twin/stop', { method: 'POST' }).catch(() => {});
-
-  ['video','zone','dot','graph'].forEach(kind => {
-    const img = document.getElementById(`vt-${kind}-img`);
-    const ph = document.getElementById(`vt-${kind}-placeholder`);
-    if (img) { img.src = ''; img.style.display = 'none'; }
-    if (ph) ph.style.display = 'flex';
-  });
-
-  document.getElementById('vt-start-btn').style.display = 'inline-flex';
-  document.getElementById('vt-start-btn').disabled = !vtSelectedFile;
-  document.getElementById('vt-stop-btn').style.display = 'none';
-  document.getElementById('vt-status-badge').textContent = 'IDLE';
-  document.getElementById('vt-stats-strip').style.display = 'none';
-}
-
-
-
 
 
 
