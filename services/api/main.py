@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from services.api.app.routers.analytics import router as analytics_router
+from services.api.app.services.analytics_engine import build_yolo_pool
 
 # Global dictionary to hold pre-loaded model weights in RAM
 ml_models = {}
@@ -29,6 +30,11 @@ async def lifespan(app: FastAPI):
         yolo_path = os.path.join(models_dir, "yolov8n_best.pt")
         ml_models["yolo"] = YOLO(yolo_path)
         ml_models["yolo_path"] = yolo_path
+
+        # Pre-build a pool of 4 YOLO instances so all zones can start analysis
+        # simultaneously without serialized on-demand loading.
+        print("[STARTUP] Pre-loading YOLO pool (4 instances for parallel zone analysis)...")
+        build_yolo_pool(yolo_path, pool_size=4)
         
         # 2. Load TensorFlow GRU Predictive Model
         print("[STARTUP] Pre-loading TensorFlow GRU Trend Predictor...")

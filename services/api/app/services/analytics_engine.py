@@ -3,14 +3,31 @@ import json
 import time
 import math
 import asyncio
+import queue
 import threading
 import numpy as np
 from ultralytics import YOLO as _YOLO
 from services.api.app.services.math_helpers import dir_entropy, flow_conflict
 
-# torch.load (used inside YOLO init) is NOT thread-safe for concurrent calls.
-# This lock serializes YOLO loads so zones don't corrupt each other's load.
-_yolo_load_lock = threading.Lock()
+# ── YOLO pool ─────────────────────────────────────────────────────────────────
+# Pre-loaded YOLO instances are placed here at startup (see build_yolo_pool).
+# Each stream borrows one instance for the duration of the video and returns it
+# when done, so all zones can begin immediately without serialized model loads.
+_yolo_pool: queue.Queue = queue.Queue()
+_yolo_load_lock = threading.Lock()   # kept only for the initial pool build
+
+
+def build_yolo_pool(yolo_path: str, pool_size: int = 4) -> None:
+    """
+    Pre-load `pool_size` independent YOLO instances and put them into the pool.
+    Call this once at app startup (after torch.set_num_threads has been set).
+    Subsequent calls are ignored if the pool already has enough instances.
+    """
+    needed = pool_size - _yolo_pool.qsize()
+    for _ in range(needed):
+        with _yolo_load_lock:   # torch.load is not thread-safe; build serially
+            _yolo_pool.put(_YOLO(yolo_path))
+    print(f"[YOLO-POOL] Ready with {_yolo_pool.qsize()} instances.")
 
 FEATURE_COLS = [
     "people_count", "density", "avg_speed_mps", "stagnation_ratio",
@@ -41,15 +58,25 @@ async def stream_crowd_predictions(video_path: str, ml_models: dict, horizon_sec
     count_y   = int(frame_h * 0.5)
     frames_per_s = max(1, int(round(src_fps)))
 
-    # Load a fresh YOLO per zone (isolated ByteTracker state).
-    # _yolo_load_lock serializes concurrent torch.load calls — each zone still
-    # gets its own independent model after the load, then processes in parallel.
+    # Borrow a pre-loaded YOLO from the pool (non-blocking: pool is pre-filled
+    # at startup so get() should succeed immediately for up to 4 concurrent zones).
+    # ByteTracker state is per-instance, so each zone tracks independently.
     yield f"data: {json.dumps({'status': 'starting'})}\n\n"
 
-    def _load_yolo():
-        with _yolo_load_lock:
-            return _YOLO(ml_models["yolo_path"])
-    yolo_model = await asyncio.to_thread(_load_yolo)
+    # Acquire a model from the pool; fall back to loading a fresh one if somehow
+    # the pool is exhausted (e.g., more than pool_size simultaneous streams).
+    try:
+        yolo_model = _yolo_pool.get_nowait()
+    except queue.Empty:
+        def _load_yolo_fallback():
+            with _yolo_load_lock:
+                return _YOLO(ml_models["yolo_path"])
+        yolo_model = await asyncio.to_thread(_load_yolo_fallback)
+        # Don't return this fallback to the pool — it will be discarded on exit.
+        yolo_model._pool_borrowed = False
+    else:
+        yolo_model._pool_borrowed = True
+
     gru_model  = ml_models["gru"]
     scaler     = ml_models["scaler"]
     encoder    = ml_models["encoder"]
@@ -89,6 +116,15 @@ async def stream_crowd_predictions(video_path: str, ml_models: dict, horizon_sec
                 continue
 
             results = yolo_model.track(frame, persist=True, classes=[0], verbose=False)
+            print("Frame processed")
+
+#            if results[0].boxes is None:
+#                print("Boxes: None")
+#            else:
+#                print("Boxes:", len(results[0].boxes))
+#
+#            if results[0].boxes is not None:
+#                print("Track IDs:", results[0].boxes.id)
             s["positions"] = []
 
             n_frame = 0
@@ -247,3 +283,6 @@ async def stream_crowd_predictions(video_path: str, ml_models: dict, horizon_sec
 
     finally:
         cap_ref[0].release()
+        # Return the borrowed YOLO model to the pool so the next stream can use it.
+        if getattr(yolo_model, "_pool_borrowed", False):
+            _yolo_pool.put(yolo_model)

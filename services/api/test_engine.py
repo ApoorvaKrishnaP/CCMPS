@@ -1,6 +1,6 @@
 import os
 import time
-from app.services.analytics_engine import stream_crowd_predictions
+from services.api.app.services.analytics_engine import stream_crowd_predictions
 
 # 1. Dynamically locate the absolute path to your weights folder
 base_dir = os.path.dirname(os.path.abspath(__file__))
