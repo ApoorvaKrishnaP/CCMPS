@@ -10,7 +10,7 @@ router = APIRouter(
 )
 
 # RTSP credentials live server-side only — never sent to the browser
-_RTSP_URL = "rtsp://admin:oW8Wzy@172.17.14.213:8556"
+_RTSP_URL = "rtsp://admin:MeYyPa@10.96.188.165:8556"
 
 # Define the incoming data contract (Pydantic payload validation)
 class StreamRequest(BaseModel):

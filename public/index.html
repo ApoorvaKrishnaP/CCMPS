@@ -1,755 +1,1649 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CCMPS — Crowd Congestion Management & Prediction System</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet"/>
-<style>
-:root {
-  --bg: #030a12;
-  --surface: #060f1a;
-  --surface2: #0a1828;
-  --border: #0d2640;
-  --border2: #1a3d5c;
-  --accent: #00d4ff;
-  --accent2: #0099cc;
-  --green: #00ff88;
-  --yellow: #ffcc00;
-  --orange: #ff7700;
-  --red: #ff2244;
-  --text: #c8e6f5;
-  --text-dim: #5a8aaa;
-  --text-bright: #e8f8ff;
-  --font-mono: 'Share Tech Mono', monospace;
-  --font-ui: 'Rajdhani', sans-serif;
-  --font-display: 'Exo 2', sans-serif;
-  --safe: #00ff88;
-  --moderate: #ffcc00;
-  --high: #ff7700;
-  --critical: #ff2244;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 14px; scroll-behavior: smooth; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-ui);
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,255,0.015) 2px, rgba(0,212,255,0.015) 4px);
-  pointer-events: none; z-index: 0;
-}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CCMPS — Crowd Congestion Management & Prediction System</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;800&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #030a12;
+      --surface: #060f1a;
+      --surface2: #0a1828;
+      --border: #0d2640;
+      --border2: #1a3d5c;
+      --accent: #00d4ff;
+      --accent2: #0099cc;
+      --green: #00ff88;
+      --yellow: #ffcc00;
+      --orange: #ff7700;
+      --red: #ff2244;
+      --text: #c8e6f5;
+      --text-dim: #5a8aaa;
+      --text-bright: #e8f8ff;
+      --font-mono: 'Share Tech Mono', monospace;
+      --font-ui: 'Rajdhani', sans-serif;
+      --font-display: 'Exo 2', sans-serif;
+      --safe: #00ff88;
+      --moderate: #ffcc00;
+      --high: #ff7700;
+      --critical: #ff2244;
+    }
 
-/* HEADER */
-.header {
-  position: sticky; top: 0; z-index: 100;
-  background: rgba(3,10,18,0.95);
-  border-bottom: 1px solid var(--border2);
-  backdrop-filter: blur(12px);
-  padding: 0 24px;
-  display: flex; align-items: center; justify-content: space-between;
-  height: 60px;
-}
-.logo {
-  display: flex; align-items: center; gap: 12px;
-}
-.logo-icon {
-  width: 36px; height: 36px;
-  border: 2px solid var(--accent);
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  position: relative; overflow: hidden;
-}
-.logo-icon::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(circle, rgba(0,212,255,0.3) 0%, transparent 70%);
-  animation: pulse 2s ease-in-out infinite;
-}
-@keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
-.logo-icon svg { z-index: 1; position: relative; }
-.logo-text { font-family: var(--font-display); font-weight: 800; font-size: 1.3rem; color: var(--text-bright); letter-spacing: 2px; }
-.logo-sub { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-dim); letter-spacing: 3px; margin-top: -2px; }
-.header-center { display: flex; gap: 4px; }
-.nav-btn {
-  padding: 6px 16px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  color: var(--text-dim);
-  font-family: var(--font-ui); font-weight: 600; font-size: 0.85rem; letter-spacing: 1px;
-  cursor: pointer; transition: all 0.2s;
-  text-transform: uppercase;
-}
-.nav-btn:hover { color: var(--accent); border-color: var(--border2); }
-.nav-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(0,212,255,0.06); }
-.header-right { display: flex; align-items: center; gap: 16px; }
-.status-pill {
-  display: flex; align-items: center; gap: 6px;
-  padding: 4px 12px; border-radius: 20px;
-  border: 1px solid var(--green); background: rgba(0,255,136,0.08);
-  font-family: var(--font-mono); font-size: 0.7rem; color: var(--green);
-}
-.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; }
-.mode-select {
-  background: var(--surface2); border: 1px solid var(--border2);
-  color: var(--accent); font-family: var(--font-mono); font-size: 0.75rem;
-  padding: 5px 10px; border-radius: 4px; cursor: pointer;
-}
-.time-display { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim); }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-/* LAYOUT */
-.main { padding: 20px 24px; position: relative; z-index: 1; }
-.page { display: none; }
-.page.active { display: block; }
+    html {
+      font-size: 14px;
+      scroll-behavior: smooth;
+    }
 
-/* STAT CARDS */
-.stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 20px; }
-.stat-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; padding: 16px 20px; position: relative; overflow: hidden;
-  transition: border-color 0.3s;
-}
-.stat-card:hover { border-color: var(--border2); }
-.stat-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, var(--accent), transparent);
-}
-.stat-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
-.stat-value { font-family: var(--font-display); font-size: 2rem; font-weight: 800; color: var(--text-bright); line-height: 1; }
-.stat-sub { font-size: 0.75rem; color: var(--text-dim); margin-top: 6px; }
-.stat-card.critical-card::before { background: linear-gradient(90deg, var(--critical), transparent); }
-.stat-card.critical-card .stat-value { color: var(--critical); }
-.stat-card.high-card::before { background: linear-gradient(90deg, var(--high), transparent); }
-.stat-card.high-card .stat-value { color: var(--high); }
-.stat-card.green-card::before { background: linear-gradient(90deg, var(--green), transparent); }
-.stat-card.green-card .stat-value { color: var(--green); }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-/* GRID LAYOUT */
-.dashboard-grid { display: grid; grid-template-columns: 1fr 380px; gap: 16px; margin-bottom: 16px; }
-.dashboard-grid-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 212, 255, 0.015) 2px, rgba(0, 212, 255, 0.015) 4px);
+      pointer-events: none;
+      z-index: 0;
+    }
 
-/* PANELS */
-.panel {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; overflow: hidden;
-}
-.panel-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 18px; border-bottom: 1px solid var(--border);
-  background: rgba(0,212,255,0.03);
-}
-.panel-title {
-  font-family: var(--font-display); font-weight: 700; font-size: 0.9rem;
-  color: var(--text-bright); letter-spacing: 1px; text-transform: uppercase;
-  display: flex; align-items: center; gap: 8px;
-}
-.panel-title-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-.panel-body { padding: 18px; }
-.badge {
-  font-family: var(--font-mono); font-size: 0.65rem; padding: 2px 8px;
-  border-radius: 3px; letter-spacing: 1px;
-}
-.badge-live { background: rgba(0,255,136,0.15); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
-.badge-info { background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid rgba(0,212,255,0.3); }
+    /* HEADER */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(3, 10, 18, 0.95);
+      border-bottom: 1px solid var(--border2);
+      backdrop-filter: blur(12px);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
 
-/* HEATMAP */
-#heatmap-canvas {
-  width: 100%; aspect-ratio: 16/9;
-  background: var(--surface2); border-radius: 6px; cursor: crosshair;
-  display: block;
-}
-.heatmap-legend {
-  display: flex; align-items: center; gap: 8px; margin-top: 12px;
-  font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim);
-}
-.legend-bar {
-  flex: 1; height: 8px; border-radius: 4px;
-  background: linear-gradient(90deg, var(--safe), var(--moderate), var(--high), var(--critical));
-}
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-/* ZONE TABLE */
-.zone-table { width: 100%; border-collapse: collapse; }
-.zone-table th {
-  font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-dim);
-  letter-spacing: 1px; text-align: left; padding: 8px 10px;
-  border-bottom: 1px solid var(--border); text-transform: uppercase;
-}
-.zone-table td { padding: 10px 10px; border-bottom: 1px solid rgba(13,38,64,0.5); font-size: 0.85rem; }
-.zone-table tr:hover td { background: rgba(0,212,255,0.04); }
-.risk-badge {
-  display: inline-block; padding: 2px 8px; border-radius: 3px;
-  font-family: var(--font-mono); font-size: 0.65rem; font-weight: bold; letter-spacing: 1px;
-}
-.risk-Safe { background: rgba(0,255,136,0.15); color: var(--safe); border: 1px solid rgba(0,255,136,0.3); }
-.risk-Moderate { background: rgba(255,204,0,0.15); color: var(--moderate); border: 1px solid rgba(255,204,0,0.3); }
-.risk-High { background: rgba(255,119,0,0.15); color: var(--high); border: 1px solid rgba(255,119,0,0.3); }
-.risk-Critical { background: rgba(255,34,68,0.15); color: var(--critical); border: 1px solid rgba(255,34,68,0.3); animation: blinkRisk 1s infinite; }
-@keyframes blinkRisk { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
 
-.density-bar-wrap { display: flex; align-items: center; gap: 6px; }
-.density-bar { height: 6px; border-radius: 3px; min-width: 4px; }
+    .logo-icon::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle, rgba(0, 212, 255, 0.3) 0%, transparent 70%);
+      animation: pulse 2s ease-in-out infinite;
+    }
 
-/* ALERTS PANEL */
-.alert-item {
-  padding: 12px 14px; border-radius: 6px; margin-bottom: 10px;
-  border-left: 3px solid; position: relative; overflow: hidden;
-}
-.alert-item.Critical { border-color: var(--critical); background: rgba(255,34,68,0.07); }
-.alert-item.High { border-color: var(--high); background: rgba(255,119,0,0.07); }
-.alert-item.Moderate { border-color: var(--moderate); background: rgba(255,204,0,0.07); }
-.alert-zone { font-family: var(--font-display); font-weight: 700; font-size: 0.9rem; color: var(--text-bright); }
-.alert-msg { font-size: 0.8rem; color: var(--text); margin: 3px 0; }
-.alert-action { font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent); }
-.alert-time { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); margin-top: 4px; }
-.no-alerts { text-align: center; padding: 30px; color: var(--text-dim); font-family: var(--font-mono); font-size: 0.8rem; }
-.no-alerts .ok-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+    @keyframes pulse {
 
-/* PREDICTION CHART */
-.pred-row {
-  display: flex; align-items: center; gap: 10px; padding: 10px 0;
-  border-bottom: 1px solid rgba(13,38,64,0.5);
-}
-.pred-zone { font-weight: 600; font-size: 0.85rem; width: 100px; flex-shrink: 0; }
-.pred-bar-wrap { flex: 1; position: relative; height: 10px; background: var(--surface2); border-radius: 5px; overflow: hidden; }
-.pred-bar-current { height: 100%; border-radius: 5px; position: absolute; left: 0; top: 0; opacity: 0.4; }
-.pred-bar-future { height: 100%; border-radius: 5px; position: absolute; left: 0; top: 0; }
-.pred-scores { display: flex; gap: 6px; font-family: var(--font-mono); font-size: 0.7rem; flex-shrink: 0; }
-.pred-arrow { font-size: 0.8rem; }
+      0%,
+      100% {
+        opacity: 0.5
+      }
 
-/* SIMULATION */
-.sim-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
-.sim-btn {
-  padding: 16px; background: var(--surface2); border: 1px solid var(--border2);
-  border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.25s;
-  position: relative; overflow: hidden;
-}
-.sim-btn:hover { border-color: var(--accent); background: rgba(0,212,255,0.06); transform: translateY(-1px); }
-.sim-btn.active-sim { border-color: var(--accent); background: rgba(0,212,255,0.1); box-shadow: 0 0 20px rgba(0,212,255,0.15); }
-.sim-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
-.sim-name { font-family: var(--font-display); font-weight: 700; font-size: 0.9rem; color: var(--text-bright); }
-.sim-desc { font-size: 0.75rem; color: var(--text-dim); margin-top: 4px; }
-.sim-result {
-  background: var(--surface2); border: 1px solid var(--border2);
-  border-radius: 8px; padding: 16px; min-height: 80px;
-}
-.sim-result-title { font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent); letter-spacing: 2px; margin-bottom: 12px; text-transform: uppercase; }
-#sim-zone-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.sim-zone-card {
-  padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface);
-  font-size: 0.75rem;
-}
-.sim-zone-name { font-weight: 600; color: var(--text-bright); margin-bottom: 4px; font-size: 0.8rem; }
-.sim-zone-score { font-family: var(--font-mono); font-size: 0.9rem; font-weight: bold; }
+      50% {
+        opacity: 1
+      }
+    }
 
-/* FLOW VISUALIZATION — SFM AGENT CANVAS */
-#flow-canvas { width: 100%; height: 380px; display: block; border-radius: 6px; background: #080c12; }
-.flow-legend {
-  display: flex; align-items: center; gap: 6px; margin-top: 10px;
-  font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-dim); flex-wrap: wrap;
-}
-.flow-legend-swatch { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
-.flow-scenario-label {
-  font-family: var(--font-mono); font-size: 0.65rem; color: var(--accent);
-  letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px;
-  padding: 4px 10px; background: rgba(0,212,255,0.07); border: 1px solid var(--border2);
-  border-radius: 4px; display: inline-block;
-}
+    .logo-icon svg {
+      z-index: 1;
+      position: relative;
+    }
 
-/* POST EVENT */
-.post-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
-.chart-bar-wrap { display: flex; align-items: flex-end; gap: 8px; height: 160px; padding: 10px 0; }
-.chart-bar-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
-.chart-bar {
-  width: 100%; border-radius: 3px 3px 0 0; min-height: 4px;
-  transition: height 0.5s ease; position: relative;
-}
-.chart-bar-label { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-dim); text-align: center; }
-.chart-bar-val { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-bright); }
-.timeline-event { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
-.timeline-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 3px; flex-shrink: 0; }
-.timeline-text { font-size: 0.8rem; }
-.timeline-time { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); }
+    .logo-text {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.3rem;
+      color: var(--text-bright);
+      letter-spacing: 2px;
+    }
 
-/* SCROLLBAR */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+    .logo-sub {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 3px;
+      margin-top: -2px;
+    }
 
-/* LOADER */
-.loading-overlay {
-  position: fixed; inset: 0; background: var(--bg); z-index: 9999;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
-}
-.loader-title { font-family: var(--font-display); font-size: 2rem; font-weight: 800; color: var(--accent); letter-spacing: 4px; }
-.loader-bar { width: 300px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
-.loader-fill { height: 100%; background: var(--accent); animation: loadFill 1.8s ease-out forwards; }
-@keyframes loadFill { from{width:0} to{width:100%} }
-.loader-sub { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim); letter-spacing: 2px; }
+    .header-center {
+      display: flex;
+      gap: 4px;
+    }
 
-/* Refresh button */
-.refresh-btn {
-  background: rgba(0,212,255,0.08); border: 1px solid var(--accent2);
-  color: var(--accent); font-family: var(--font-mono); font-size: 0.7rem;
-  padding: 4px 12px; border-radius: 4px; cursor: pointer; letter-spacing: 1px;
-  transition: all 0.2s;
-}
-.refresh-btn:hover { background: rgba(0,212,255,0.15); }
-.refresh-btn.spinning { animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+    .nav-btn {
+      padding: 6px 16px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      color: var(--text-dim);
+      font-family: var(--font-ui);
+      font-weight: 600;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+    }
 
-.section-title {
-  font-family: var(--font-display); font-weight: 700; font-size: 1.1rem;
-  color: var(--text-bright); letter-spacing: 2px; text-transform: uppercase;
-  margin-bottom: 16px; padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 10px;
-}
-.section-title::before { content: '//'; color: var(--accent); font-family: var(--font-mono); }
+    .nav-btn:hover {
+      color: var(--accent);
+      border-color: var(--border2);
+    }
 
-/* ── UPLOAD PANEL ─────────────────────────────────────────────── */
-.upload-row {
-  display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
-}
-.field-label {
-  font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-dim);
-  letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px;
-}
-.dim-input {
-  background: var(--surface2); border: 1px solid var(--border2);
-  color: var(--accent); font-family: var(--font-mono); font-size: 0.8rem;
-  padding: 6px 10px; border-radius: 4px; width: 80px;
-  -moz-appearance: textfield;
-}
-.dim-input::-webkit-inner-spin-button { -webkit-appearance: none; }
-.zone-select-upload {
-  background: var(--surface2); border: 1px solid var(--border2);
-  color: var(--accent); font-family: var(--font-mono); font-size: 0.75rem;
-  padding: 6px 10px; border-radius: 4px; cursor: pointer; min-width: 150px;
-}
-.file-upload-label {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 14px; background: var(--surface2); border: 1px dashed var(--border2);
-  border-radius: 4px; color: var(--text-dim); font-family: var(--font-mono);
-  font-size: 0.72rem; cursor: pointer; transition: all 0.2s; letter-spacing: 1px;
-}
-.file-upload-label:hover { border-color: var(--accent); color: var(--accent); }
-#video-filename {
-  font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-dim);
-  max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.start-btn {
-  padding: 7px 18px; background: rgba(0,255,136,0.1); border: 1px solid var(--green);
-  color: var(--green); font-family: var(--font-ui); font-weight: 700; font-size: 0.85rem;
-  border-radius: 4px; cursor: pointer; letter-spacing: 1px; transition: all 0.2s;
-}
-.start-btn:hover { background: rgba(0,255,136,0.2); }
-.start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.stop-btn {
-  padding: 7px 18px; background: rgba(255,34,68,0.1); border: 1px solid var(--critical);
-  color: var(--critical); font-family: var(--font-ui); font-weight: 700; font-size: 0.85rem;
-  border-radius: 4px; cursor: pointer; letter-spacing: 1px; transition: all 0.2s;
-}
-.stop-btn:hover { background: rgba(255,34,68,0.2); }
-.live-metrics-strip {
-  display: flex; gap: 24px; flex-wrap: wrap;
-  margin-top: 14px; padding: 10px 14px;
-  background: rgba(0,212,255,0.04); border: 1px solid var(--border2);
-  border-radius: 6px;
-}
-.lm-item { display: flex; flex-direction: column; gap: 2px; }
-.lm-label { font-family: var(--font-mono); font-size: 0.58rem; color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase; }
-.lm-value { font-family: var(--font-mono); font-size: 1rem; color: var(--accent); font-weight: bold; }
-.lm-value.good  { color: var(--green); }
-.lm-value.warn  { color: var(--yellow); }
-.lm-value.bad   { color: var(--orange); }
-.lm-value.crit  { color: var(--critical); }
-/* Live row highlight in zone table */
-.zone-table tr.live-row td { background: rgba(0,212,255,0.06) !important; }
-.zone-table tr.live-row td:first-child { border-left: 2px solid var(--accent); }
+    .nav-btn.active {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: rgba(0, 212, 255, 0.06);
+    }
 
-/* ── VID-TWIN LIVE ANALYTICS ─────────────────────────────────────────────── */
-.vt-upload-row {
-  display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
-  padding: 16px 18px; border-bottom: 1px solid var(--border);
-  background: rgba(0,212,255,0.02);
-}
-.vt-streams {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  padding: 14px;
-}
-.vt-stream-card {
-  background: var(--surface2); border: 1px solid var(--border2);
-  border-radius: 8px; overflow: hidden;
-  display: flex; flex-direction: column;
-}
-.vt-stream-card.full-width { grid-column: 1 / -1; }
-.vt-stream-title {
-  font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim);
-  letter-spacing: 2px; text-transform: uppercase;
-  padding: 8px 12px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 8px;
-}
-.vt-stream-title-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.5s infinite; }
-.vt-img {
-  width: 100%; display: block;
-  background: #030a12;
-  min-height: 220px;
-  object-fit: contain;
-}
-.vt-stream-card.full-width .vt-img { min-height: 300px; }
-.vt-placeholder {
-  width: 100%; min-height: 220px;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 10px;
-  background: var(--surface2);
-  color: var(--text-dim);
-  font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 1px;
-}
-.vt-stream-card.full-width .vt-placeholder { min-height: 300px; }
-.vt-placeholder-icon { font-size: 2.5rem; opacity: 0.4; }
-.vt-stats-strip {
-  display: flex; gap: 20px; flex-wrap: wrap;
-  padding: 10px 14px;
-  background: rgba(0,212,255,0.03); border-top: 1px solid var(--border);
-}
-.dt-zone-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
-  gap: 14px;
-}
-.dt-zone-card {
-  background: var(--surface2);
-  border: 1px solid var(--border2);
-  border-radius: 8px;
-  overflow: hidden;
-}
-.dt-zone-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 9px 12px;
-  border-bottom: 1px solid var(--border);
-}
-.dt-zone-name {
-  font-family: var(--font-display);
-  font-weight: 700;
-  color: var(--text-bright);
-}
-.dt-zone-meta {
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  color: var(--text-dim);
-}
-.dt-zone-canvas {
-  width: 100%;
-  height: 260px;
-  display: block;
-  background: #050b12;
-}
-</style>
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--green);
+      background: rgba(0, 255, 136, 0.08);
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--green);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 1.5s infinite;
+    }
+
+    .mode-select {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .time-display {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    /* LAYOUT */
+    .main {
+      padding: 20px 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* STAT CARDS */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+
+    .stat-card:hover {
+      border-color: var(--border2);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-bright);
+      line-height: 1;
+    }
+
+    .stat-sub {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+
+    .stat-card.critical-card::before {
+      background: linear-gradient(90deg, var(--critical), transparent);
+    }
+
+    .stat-card.critical-card .stat-value {
+      color: var(--critical);
+    }
+
+    .stat-card.high-card::before {
+      background: linear-gradient(90deg, var(--high), transparent);
+    }
+
+    .stat-card.high-card .stat-value {
+      color: var(--high);
+    }
+
+    .stat-card.green-card::before {
+      background: linear-gradient(90deg, var(--green), transparent);
+    }
+
+    .stat-card.green-card .stat-value {
+      color: var(--green);
+    }
+
+    /* GRID LAYOUT */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .dashboard-grid-bottom {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* PANELS */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 212, 255, 0.03);
+    }
+
+    .panel-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--text-bright);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-title-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .panel-body {
+      padding: 18px;
+    }
+
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      border-radius: 3px;
+      letter-spacing: 1px;
+    }
+
+    .badge-live {
+      background: rgba(0, 255, 136, 0.15);
+      color: var(--green);
+      border: 1px solid rgba(0, 255, 136, 0.3);
+    }
+
+    .badge-info {
+      background: rgba(0, 212, 255, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+    }
+
+    /* HEATMAP */
+    #heatmap-canvas {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: var(--surface2);
+      border-radius: 6px;
+      cursor: crosshair;
+      display: block;
+    }
+
+    .heatmap-legend {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+    }
+
+    .legend-bar {
+      flex: 1;
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--safe), var(--moderate), var(--high), var(--critical));
+    }
+
+    /* ZONE TABLE */
+    .zone-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .zone-table th {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+    }
+
+    .zone-table td {
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(13, 38, 64, 0.5);
+      font-size: 0.85rem;
+    }
+
+    .zone-table tr:hover td {
+      background: rgba(0, 212, 255, 0.04);
+    }
+
+    .risk-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .risk-Safe {
+      background: rgba(0, 255, 136, 0.15);
+      color: var(--safe);
+      border: 1px solid rgba(0, 255, 136, 0.3);
+    }
+
+    .risk-Moderate {
+      background: rgba(255, 204, 0, 0.15);
+      color: var(--moderate);
+      border: 1px solid rgba(255, 204, 0, 0.3);
+    }
+
+    .risk-High {
+      background: rgba(255, 119, 0, 0.15);
+      color: var(--high);
+      border: 1px solid rgba(255, 119, 0, 0.3);
+    }
+
+    .risk-Critical {
+      background: rgba(255, 34, 68, 0.15);
+      color: var(--critical);
+      border: 1px solid rgba(255, 34, 68, 0.3);
+      animation: blinkRisk 1s infinite;
+    }
+
+    @keyframes blinkRisk {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.5
+      }
+    }
+
+    .density-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .density-bar {
+      height: 6px;
+      border-radius: 3px;
+      min-width: 4px;
+    }
+
+    /* ALERTS PANEL */
+    .alert-item {
+      padding: 12px 14px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      border-left: 3px solid;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .alert-item.Critical {
+      border-color: var(--critical);
+      background: rgba(255, 34, 68, 0.07);
+    }
+
+    .alert-item.High {
+      border-color: var(--high);
+      background: rgba(255, 119, 0, 0.07);
+    }
+
+    .alert-item.Moderate {
+      border-color: var(--moderate);
+      background: rgba(255, 204, 0, 0.07);
+    }
+
+    .alert-zone {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--text-bright);
+    }
+
+    .alert-msg {
+      font-size: 0.8rem;
+      color: var(--text);
+      margin: 3px 0;
+    }
+
+    .alert-action {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+    }
+
+    .alert-time {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .no-alerts {
+      text-align: center;
+      padding: 30px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .no-alerts .ok-icon {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    /* PREDICTION CHART */
+    .pred-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(13, 38, 64, 0.5);
+    }
+
+    .pred-zone {
+      font-weight: 600;
+      font-size: 0.85rem;
+      width: 100px;
+      flex-shrink: 0;
+    }
+
+    .pred-bar-wrap {
+      flex: 1;
+      position: relative;
+      height: 10px;
+      background: var(--surface2);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .pred-bar-current {
+      height: 100%;
+      border-radius: 5px;
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0.4;
+    }
+
+    .pred-bar-future {
+      height: 100%;
+      border-radius: 5px;
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+
+    .pred-scores {
+      display: flex;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      flex-shrink: 0;
+    }
+
+    .pred-arrow {
+      font-size: 0.8rem;
+    }
+
+    /* SIMULATION */
+    .sim-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .sim-btn {
+      padding: 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sim-btn:hover {
+      border-color: var(--accent);
+      background: rgba(0, 212, 255, 0.06);
+      transform: translateY(-1px);
+    }
+
+    .sim-btn.active-sim {
+      border-color: var(--accent);
+      background: rgba(0, 212, 255, 0.1);
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.15);
+    }
+
+    .sim-icon {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .sim-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--text-bright);
+    }
+
+    .sim-desc {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .sim-result {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 16px;
+      min-height: 80px;
+    }
+
+    .sim-result-title {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+
+    #sim-zone-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .sim-zone-card {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.75rem;
+    }
+
+    .sim-zone-name {
+      font-weight: 600;
+      color: var(--text-bright);
+      margin-bottom: 4px;
+      font-size: 0.8rem;
+    }
+
+    .sim-zone-score {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+
+    /* FLOW VISUALIZATION — SFM AGENT CANVAS */
+    #flow-canvas {
+      width: 100%;
+      height: 380px;
+      display: block;
+      border-radius: 6px;
+      background: #080c12;
+    }
+
+    .flow-legend {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      flex-wrap: wrap;
+    }
+
+    .flow-legend-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .flow-scenario-label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--accent);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      padding: 4px 10px;
+      background: rgba(0, 212, 255, 0.07);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--surface);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 3px;
+    }
+
+    /* LOADER */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .loader-title {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 4px;
+    }
+
+    .loader-bar {
+      width: 300px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .loader-fill {
+      height: 100%;
+      background: var(--accent);
+      animation: loadFill 1.8s ease-out forwards;
+    }
+
+    @keyframes loadFill {
+      from {
+        width: 0
+      }
+
+      to {
+        width: 100%
+      }
+    }
+
+    .loader-sub {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+    }
+
+    /* Refresh button */
+    .refresh-btn {
+      background: rgba(0, 212, 255, 0.08);
+      border: 1px solid var(--accent2);
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      padding: 4px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+
+    .refresh-btn:hover {
+      background: rgba(0, 212, 255, 0.15);
+    }
+
+    .refresh-btn.spinning {
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text-bright);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::before {
+      content: '//';
+      color: var(--accent);
+      font-family: var(--font-mono);
+    }
+
+    /* ── UPLOAD PANEL ─────────────────────────────────────────────── */
+    .upload-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .field-label {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+
+    .dim-input {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      padding: 6px 10px;
+      border-radius: 4px;
+      width: 80px;
+      -moz-appearance: textfield;
+    }
+
+    .dim-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+    }
+
+    .zone-select-upload {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      min-width: 150px;
+    }
+
+    .file-upload-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--surface2);
+      border: 1px dashed var(--border2);
+      border-radius: 4px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 1px;
+    }
+
+    .file-upload-label:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    #video-filename {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .start-btn {
+      padding: 7px 18px;
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid var(--green);
+      color: var(--green);
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 0.85rem;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+
+    .start-btn:hover {
+      background: rgba(0, 255, 136, 0.2);
+    }
+
+    .start-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .stop-btn {
+      padding: 7px 18px;
+      background: rgba(255, 34, 68, 0.1);
+      border: 1px solid var(--critical);
+      color: var(--critical);
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 0.85rem;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+
+    .stop-btn:hover {
+      background: rgba(255, 34, 68, 0.2);
+    }
+
+    .live-metrics-strip {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: rgba(0, 212, 255, 0.04);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+    }
+
+    .lm-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .lm-label {
+      font-family: var(--font-mono);
+      font-size: 0.58rem;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .lm-value {
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .lm-value.good {
+      color: var(--green);
+    }
+
+    .lm-value.warn {
+      color: var(--yellow);
+    }
+
+    .lm-value.bad {
+      color: var(--orange);
+    }
+
+    .lm-value.crit {
+      color: var(--critical);
+    }
+
+    /* Live row highlight in zone table */
+    .zone-table tr.live-row td {
+      background: rgba(0, 212, 255, 0.06) !important;
+    }
+
+    .zone-table tr.live-row td:first-child {
+      border-left: 2px solid var(--accent);
+    }
+
+    /* ── VID-TWIN LIVE ANALYTICS ─────────────────────────────────────────────── */
+    .vt-upload-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 212, 255, 0.02);
+    }
+
+    .vt-streams {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .vt-stream-card {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .vt-stream-card.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .vt-stream-title {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .vt-stream-title-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.5s infinite;
+    }
+
+    .vt-img {
+      width: 100%;
+      display: block;
+      background: #030a12;
+      min-height: 220px;
+      object-fit: contain;
+    }
+
+    .vt-stream-card.full-width .vt-img {
+      min-height: 300px;
+    }
+
+    .vt-placeholder {
+      width: 100%;
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: var(--surface2);
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 1px;
+    }
+
+    .vt-stream-card.full-width .vt-placeholder {
+      min-height: 300px;
+    }
+
+    .vt-placeholder-icon {
+      font-size: 2.5rem;
+      opacity: 0.4;
+    }
+
+    .vt-stats-strip {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      background: rgba(0, 212, 255, 0.03);
+      border-top: 1px solid var(--border);
+    }
+
+    .dt-zone-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .dt-zone-card {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .dt-zone-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dt-zone-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--text-bright);
+    }
+
+    .dt-zone-meta {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      color: var(--text-dim);
+    }
+
+    .dt-zone-canvas {
+      width: 100%;
+      height: 260px;
+      display: block;
+      background: #050b12;
+    }
+  </style>
 </head>
+
 <body>
 
-<div class="loading-overlay" id="loader">
-  <div class="loader-title">CCMPS</div>
-  <div class="loader-bar"><div class="loader-fill"></div></div>
-  <div class="loader-sub">INITIALIZING CROWD MANAGEMENT SYSTEMS...</div>
-</div>
-
-<header class="header">
-  <div class="logo">
-    <div class="logo-icon">
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <circle cx="9" cy="9" r="7" stroke="#00d4ff" stroke-width="1.5"/>
-        <circle cx="9" cy="9" r="3" fill="#00d4ff" opacity="0.6"/>
-        <line x1="9" y1="2" x2="9" y2="6" stroke="#00d4ff" stroke-width="1.5"/>
-        <line x1="9" y1="12" x2="9" y2="16" stroke="#00d4ff" stroke-width="1.5"/>
-        <line x1="2" y1="9" x2="6" y2="9" stroke="#00d4ff" stroke-width="1.5"/>
-        <line x1="12" y1="9" x2="16" y2="9" stroke="#00d4ff" stroke-width="1.5"/>
-      </svg>
+  <div class="loading-overlay" id="loader">
+    <div class="loader-title">CCMPS</div>
+    <div class="loader-bar">
+      <div class="loader-fill"></div>
     </div>
-    <div>
-      <div class="logo-text">CCMPS</div>
-      <div class="logo-sub">Crowd Congestion Management & Prediction</div>
-    </div>
+    <div class="loader-sub">INITIALIZING CROWD MANAGEMENT SYSTEMS...</div>
   </div>
 
-  <nav class="header-center">
-    <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
-    <button class="nav-btn" onclick="showPage('predictions')">Predictions</button>
-    <button class="nav-btn" onclick="showPage('simulation')">Digital Twin</button>
-    <button class="nav-btn" onclick="showPage('alerts')">Alerts</button>
-    <button class="nav-btn" onclick="showPage('postEvent')">Post-Event</button>
-  </nav>
-
-  <div class="header-right">
-    <div class="status-pill"><div class="status-dot"></div> SYSTEM ONLINE</div>
-    <select class="mode-select" id="mode-select" onchange="onModeChange(this.value)">
-      <option value="realtime">REAL-TIME MODE</option>
-      <option value="planning">PLANNING MODE</option>
-      <option value="postevent">POST-EVENT MODE</option>
-    </select>
-    <div class="time-display" id="clock">--:--:--</div>
-  </div>
-</header>
-
-<main class="main">
-
-  <!-- DASHBOARD PAGE -->
-<div class="page active" id="page-dashboard">
-
-    <div class="panel" id="pipeline-panel" style="margin-bottom:16px">
-      <div class="panel-header">
-        <div class="panel-title"><div class="panel-title-dot"></div>AI Engine — Pipeline Controls</div>
-      </div>
-      <div class="panel-body">
-
-        <!-- ── TWO SIDE-BY-SIDE ACTION ROWS ─────────────────────────────── -->
-        <div style="display:grid;grid-template-columns:1fr auto;gap:0;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:14px;align-items:center">
-
-          <!-- LEFT: Upload video flow -->
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);letter-spacing:1px">OPTION 1</div>
-            <div style="font-size:0.85rem;color:var(--text-bright);font-weight:600">Upload Zone Videos</div>
-            <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim)" id="upload-status-line">Select video files below per zone, then click ▶ Start.</div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <button id="start-pipeline-btn" class="start-btn" onclick="uploadAllVideos()" disabled>▶ Start All Predictions</button>
-            <button id="stop-pipeline-btn" class="stop-btn" onclick="stopPipeline()" style="display:none">■ Stop All</button>
-          </div>
-        </div>
-
-        <!-- Zone upload cards (unchanged) -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:16px" id="zone-upload-grid"></div>
-
-        <!-- ── DIVIDER ───────────────────────────────────────────────────── -->
-        <div style="border-top:1px solid var(--border2);margin-bottom:14px;padding-top:14px;display:grid;grid-template-columns:1fr auto;gap:0;align-items:center">
-
-          <!-- LEFT: Live RTSP description -->
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);letter-spacing:1px">OPTION 2</div>
-            <div style="font-size:0.85rem;color:var(--text-bright);font-weight:600">Test Live — RTSP Camera</div>
-            <select id="live-zone-select" class="zone-select-upload" style="padding:4px 8px;font-size:0.78rem">
-              <option>Gate A</option><option>Gate B</option><option>Main Hall</option><option>Concourse</option>
-            </select>
-            <span id="live-status-text" style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim)">RTSP camera ready</span>
-          </div>
-
-          <!-- RIGHT: RTSP buttons -->
-          <div style="display:flex;gap:8px;align-items:center">
-            <button id="live-start-btn" class="start-btn" style="background:rgba(0,212,255,0.1);border-color:var(--accent)" onclick="testLive()">📡 Connect RTSP &amp; Start</button>
-            <button id="live-stop-btn" class="stop-btn" onclick="stopLive()" style="display:none">■ Stop Live</button>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <div class="section-title">System Wide Live Analytics Matrix Grid View</div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px;" id="zone-matrix-grid">
-      </div>
-  </div>
-
-  <!-- PREDICTIONS PAGE -->
-  <div class="page" id="page-predictions">
-    <div class="section-title">Prediction Engine — 2–10 Min Forecast</div>
-    <div style="display:grid;grid-template-columns:1fr 340px;gap:16px">
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title"><div class="panel-title-dot"></div>Congestion Forecast</div>
-          <button class="refresh-btn" onclick="loadPredictions()">↻ REFRESH</button>
-        </div>
-        <div class="panel-body" id="pred-rows"></div>
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <circle cx="9" cy="9" r="7" stroke="#00d4ff" stroke-width="1.5" />
+          <circle cx="9" cy="9" r="3" fill="#00d4ff" opacity="0.6" />
+          <line x1="9" y1="2" x2="9" y2="6" stroke="#00d4ff" stroke-width="1.5" />
+          <line x1="9" y1="12" x2="9" y2="16" stroke="#00d4ff" stroke-width="1.5" />
+          <line x1="2" y1="9" x2="6" y2="9" stroke="#00d4ff" stroke-width="1.5" />
+          <line x1="12" y1="9" x2="16" y2="9" stroke="#00d4ff" stroke-width="1.5" />
+        </svg>
       </div>
       <div>
-        <div class="panel" style="margin-bottom:16px">
-          <div class="panel-header"><div class="panel-title"><div class="panel-title-dot" style="background:var(--yellow)"></div>Risk Distribution</div></div>
-          <div class="panel-body">
-            <canvas id="risk-donut" width="300" height="200"></canvas>
+        <div class="logo-text">CCMPS</div>
+        <div class="logo-sub">Crowd Congestion Management & Prediction</div>
+      </div>
+    </div>
+
+    <nav class="header-center">
+      <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
+      <button class="nav-btn" onclick="showPage('predictions')">Predictions</button>
+      <button class="nav-btn" onclick="showPage('simulation')">Digital Twin</button>
+      <button class="nav-btn" onclick="showPage('alerts')">Alerts</button>
+
+    </nav>
+
+    <div class="header-right">
+      <div class="status-pill">
+        <div class="status-dot"></div> SYSTEM ONLINE
+      </div>
+      <select class="mode-select" id="mode-select" onchange="onModeChange(this.value)">
+        <option value="realtime">REAL-TIME MODE</option>
+        <option value="planning">PLANNING MODE</option>
+
+      </select>
+      <div class="time-display" id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <!-- DASHBOARD PAGE -->
+    <div class="page active" id="page-dashboard">
+
+      <div class="panel" id="pipeline-panel" style="margin-bottom:16px">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-title-dot"></div>AI Engine — Pipeline Controls
           </div>
         </div>
+        <div class="panel-body">
+
+          <!-- ── TWO SIDE-BY-SIDE ACTION ROWS ─────────────────────────────── -->
+          <div
+            style="display:grid;grid-template-columns:1fr auto;gap:0;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:14px;align-items:center">
+
+            <!-- LEFT: Upload video flow -->
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);letter-spacing:1px">OPTION
+                1</div>
+              <div style="font-size:0.85rem;color:var(--text-bright);font-weight:600">Upload Zone Videos</div>
+              <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim)" id="upload-status-line">
+                Select video files below per zone, then click ▶ Start.</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button id="start-pipeline-btn" class="start-btn" onclick="uploadAllVideos()" disabled>▶ Start All
+                Predictions</button>
+              <button id="stop-pipeline-btn" class="stop-btn" onclick="stopPipeline()" style="display:none">■ Stop
+                All</button>
+            </div>
+          </div>
+
+          <!-- Zone upload cards (unchanged) -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:16px"
+            id="zone-upload-grid"></div>
+
+          <!-- ── DIVIDER ───────────────────────────────────────────────────── -->
+          <div
+            style="border-top:1px solid var(--border2);margin-bottom:14px;padding-top:14px;display:grid;grid-template-columns:1fr auto;gap:0;align-items:center">
+
+            <!-- LEFT: Live RTSP description -->
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);letter-spacing:1px">OPTION
+                2</div>
+              <div style="font-size:0.85rem;color:var(--text-bright);font-weight:600">Test Live — RTSP Camera</div>
+              <select id="live-zone-select" class="zone-select-upload" style="padding:4px 8px;font-size:0.78rem">
+                <option>Gate A</option>
+                <option>Gate B</option>
+                <option>Main Hall</option>
+                <option>Concourse</option>
+              </select>
+              <span id="live-status-text"
+                style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim)">RTSP camera ready</span>
+            </div>
+
+            <!-- RIGHT: RTSP buttons -->
+            <div style="display:flex;gap:8px;align-items:center">
+              <button id="live-start-btn" class="start-btn"
+                style="background:rgba(0,212,255,0.1);border-color:var(--accent)" onclick="testLive()">📡 Connect RTSP
+                &amp; Start</button>
+              <button id="live-stop-btn" class="stop-btn" onclick="stopLive()" style="display:none">■ Stop Live</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="section-title">System Wide Live Analytics Matrix Grid View</div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px;"
+        id="zone-matrix-grid">
+      </div>
+    </div>
+
+    <!-- PREDICTIONS PAGE -->
+    <div class="page" id="page-predictions">
+      <div class="section-title">Prediction Engine — 2–10 Min Forecast</div>
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:16px">
         <div class="panel">
-          <div class="panel-header"><div class="panel-title"><div class="panel-title-dot" style="background:var(--red)"></div>Risk Classification</div></div>
-          <div class="panel-body">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="risk-classes">
-              <div style="padding:10px;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.2);border-radius:6px;text-align:center">
-                <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--safe)">SAFE</div>
-                <div style="font-size:1.5rem;font-weight:800;color:var(--safe)" id="rc-safe">0</div>
-                <div style="font-size:0.7rem;color:var(--text-dim)">zones</div>
+          <div class="panel-header">
+            <div class="panel-title">
+              <div class="panel-title-dot"></div>Congestion Forecast
+            </div>
+            <button class="refresh-btn" onclick="loadPredictions()">↻ REFRESH</button>
+          </div>
+          <div class="panel-body" id="pred-rows"></div>
+        </div>
+        <div>
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-header">
+              <div class="panel-title">
+                <div class="panel-title-dot" style="background:var(--yellow)"></div>Risk Distribution
               </div>
-              <div style="padding:10px;background:rgba(255,204,0,0.07);border:1px solid rgba(255,204,0,0.2);border-radius:6px;text-align:center">
-                <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--moderate)">MODERATE</div>
-                <div style="font-size:1.5rem;font-weight:800;color:var(--moderate)" id="rc-moderate">0</div>
-                <div style="font-size:0.7rem;color:var(--text-dim)">zones</div>
+            </div>
+            <div class="panel-body">
+              <canvas id="risk-donut" width="300" height="200"></canvas>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <div class="panel-title-dot" style="background:var(--red)"></div>Risk Classification
               </div>
-              <div style="padding:10px;background:rgba(255,119,0,0.07);border:1px solid rgba(255,119,0,0.2);border-radius:6px;text-align:center">
-                <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--high)">HIGH</div>
-                <div style="font-size:1.5rem;font-weight:800;color:var(--high)" id="rc-high">0</div>
-                <div style="font-size:0.7rem;color:var(--text-dim)">zones</div>
-              </div>
-              <div style="padding:10px;background:rgba(255,34,68,0.07);border:1px solid rgba(255,34,68,0.2);border-radius:6px;text-align:center">
-                <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--critical)">CRITICAL</div>
-                <div style="font-size:1.5rem;font-weight:800;color:var(--critical)" id="rc-critical">0</div>
-                <div style="font-size:0.7rem;color:var(--text-dim)">zones</div>
+            </div>
+            <div class="panel-body">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="risk-classes">
+                <div
+                  style="padding:10px;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.2);border-radius:6px;text-align:center">
+                  <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--safe)">SAFE</div>
+                  <div style="font-size:1.5rem;font-weight:800;color:var(--safe)" id="rc-safe">0</div>
+                  <div style="font-size:0.7rem;color:var(--text-dim)">zones</div>
+                </div>
+                <div
+                  style="padding:10px;background:rgba(255,204,0,0.07);border:1px solid rgba(255,204,0,0.2);border-radius:6px;text-align:center">
+                  <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--moderate)">MODERATE</div>
+                  <div style="font-size:1.5rem;font-weight:800;color:var(--moderate)" id="rc-moderate">0</div>
+                  <div style="font-size:0.7rem;color:var(--text-dim)">zones</div>
+                </div>
+                <div
+                  style="padding:10px;background:rgba(255,119,0,0.07);border:1px solid rgba(255,119,0,0.2);border-radius:6px;text-align:center">
+                  <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--high)">HIGH</div>
+                  <div style="font-size:1.5rem;font-weight:800;color:var(--high)" id="rc-high">0</div>
+                  <div style="font-size:0.7rem;color:var(--text-dim)">zones</div>
+                </div>
+                <div
+                  style="padding:10px;background:rgba(255,34,68,0.07);border:1px solid rgba(255,34,68,0.2);border-radius:6px;text-align:center">
+                  <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--critical)">CRITICAL</div>
+                  <div style="font-size:1.5rem;font-weight:800;color:var(--critical)" id="rc-critical">0</div>
+                  <div style="font-size:0.7rem;color:var(--text-dim)">zones</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- DIGITAL TWIN / SIMULATION PAGE -->
-  <div class="page" id="page-simulation">
-    <div class="section-title">Digital Twin Simulation Engine</div>
-    <div class="sim-grid">
-      <div class="sim-btn" onclick="runSim('gate_closure', this)">
-        <span class="sim-icon">🚪</span>
-        <div class="sim-name">Gate Closure</div>
-        <div class="sim-desc">Simulate sudden closure of entry gates and observe crowd redistribution</div>
-      </div>
-      <div class="sim-btn" onclick="runSim('increased_inflow', this)">
-        <span class="sim-icon">📈</span>
-        <div class="sim-name">Increased Inflow</div>
-        <div class="sim-desc">Model a surge in crowd inflow and predict congestion hotspots</div>
-      </div>
-      <div class="sim-btn" onclick="runSim('evacuation', this)">
-        <span class="sim-icon">🚨</span>
-        <div class="sim-name">Emergency Evacuation</div>
-        <div class="sim-desc">Test evacuation protocols and identify bottlenecks at exits</div>
-      </div>
-    </div>
+    <!-- DIGITAL TWIN / SIMULATION PAGE -->
+    <div class="page" id="page-simulation">
+      <div class="section-title">Digital Twin Simulation Engine</div>
 
-    <div class="sim-result">
-      <div class="sim-result-title" id="sim-result-title">SELECT A SCENARIO TO RUN SIMULATION</div>
-      <div id="sim-zone-grid"></div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title"><div class="panel-title-dot"></div>Social Force Model — Live Agent Simulation</div>
-          <div id="flow-scenario-badge" class="flow-scenario-label" style="display:none">IDLE</div>
+      <!-- Scenario selector cards -->
+      <div class="sim-grid">
+        <div class="sim-btn" id="sim-btn-gate_closure" onclick="runSim('gate_closure', this)">
+          <span class="sim-icon">🚪</span>
+          <div class="sim-name">Gate Closure</div>
+          <div class="sim-desc">Sudden closure of entry gates — observe crowd redistribution to alternate entrances
+          </div>
+          <ul
+            style="text-align:left;margin-top:10px;padding-left:16px;font-size:0.72rem;color:var(--text-dim);line-height:1.7">
+            <li>Closed gates stop accepting new pedestrians</li>
+            <li>Arrivals redirect to nearest available gate</li>
+            <li>Density increases at alternate entrances</li>
+          </ul>
         </div>
-        <div class="panel-body">
-          <canvas id="flow-canvas"></canvas>
-          <div class="flow-legend">
-            <div class="flow-legend-swatch" style="background:#00cc55"></div><span>Slow (&lt;0.5 m/s)</span>
-            <div class="flow-legend-swatch" style="background:#ffaa00;margin-left:6px"></div><span>Medium (0.5–1.2)</span>
-            <div class="flow-legend-swatch" style="background:#ff2244;margin-left:6px"></div><span>Fast (&gt;1.2 m/s)</span>
-            <div class="flow-legend-swatch" style="background:#4466ff;margin-left:6px;border-radius:0;height:3px;width:14px"></div><span>Walls / Barriers</span>
-            <span style="margin-left:10px;opacity:0.6">Arrows = velocity · Click a scenario above to start</span>
+        <div class="sim-btn" id="sim-btn-increased_inflow" onclick="runSim('increased_inflow', this)">
+          <span class="sim-icon">📈</span>
+          <div class="sim-name">Increased Inflow</div>
+          <div class="sim-desc">Surge in visitor arrivals — identify congestion hotspots and capacity limits</div>
+          <ul
+            style="text-align:left;margin-top:10px;padding-left:16px;font-size:0.72rem;color:var(--text-dim);line-height:1.7">
+            <li>Pedestrians enter at elevated rate</li>
+            <li>Narrow walkways become congested</li>
+            <li>Temporary queues and bottlenecks emerge</li>
+          </ul>
+        </div>
+        <div class="sim-btn" id="sim-btn-evacuation" onclick="runSim('evacuation', this)">
+          <span class="sim-icon">🚨</span>
+          <div class="sim-name">Emergency Evacuation</div>
+          <div class="sim-desc">Emergency alarm triggers full evacuation — evaluate exit efficiency and bottlenecks
+          </div>
+          <ul
+            style="text-align:left;margin-top:10px;padding-left:16px;font-size:0.72rem;color:var(--text-dim);line-height:1.7">
+            <li>All pedestrians head to nearest safe exit</li>
+            <li>Walking speed increases under urgency</li>
+            <li>Exit bottlenecks become clearly visible</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Scenario zone-score results strip -->
+      <div class="sim-result">
+        <div class="sim-result-title" id="sim-result-title">SELECT A SCENARIO TO RUN SIMULATION</div>
+        <div id="sim-zone-grid"></div>
+      </div>
+
+      <!-- Live metrics strip (shown during simulation) -->
+      <div id="sim-live-metrics"
+        style="display:none;margin-top:12px;padding:10px 16px;background:rgba(0,212,255,0.04);border:1px solid var(--border2);border-radius:6px;display:none">
+        <div
+          style="font-family:var(--font-mono);font-size:0.58rem;color:var(--text-dim);letter-spacing:2px;margin-bottom:8px">
+          LIVE SIMULATION METRICS</div>
+        <div style="display:flex;gap:24px;flex-wrap:wrap">
+          <div class="lm-item">
+            <div class="lm-label">Active Agents</div>
+            <div class="lm-value" id="slm-agents">—</div>
+          </div>
+          <div class="lm-item">
+            <div class="lm-label">Avg Speed (m/s)</div>
+            <div class="lm-value" id="slm-speed">—</div>
+          </div>
+          <div class="lm-item">
+            <div class="lm-label">Peak Density (p/m²)</div>
+            <div class="lm-value" id="slm-density">—</div>
+          </div>
+          <div class="lm-item">
+            <div class="lm-label">Bottlenecks</div>
+            <div class="lm-value" id="slm-bottles">—</div>
+          </div>
+          <div class="lm-item">
+            <div class="lm-label">Throughput /min</div>
+            <div class="lm-value" id="slm-throughput">—</div>
+          </div>
+          <div class="lm-item">
+            <div class="lm-label">Sim Time</div>
+            <div class="lm-value" id="slm-time" style="color:var(--text-dim);font-size:0.8rem">—</div>
           </div>
         </div>
       </div>
-      <div class="panel">
-        <div class="panel-header"><div class="panel-title"><div class="panel-title-dot" style="background:var(--yellow)"></div>Scenario Recommendations</div></div>
-        <div class="panel-body" id="sim-recommendations">
-          <div style="color:var(--text-dim);font-family:var(--font-mono);font-size:0.8rem;text-align:center;padding:30px 0">Run a simulation to generate recommendations</div>
-        </div>
-      </div>
-    </div>
 
-    <!-- ── FOUR-ZONE LIVE DOT DIGITAL TWIN ────────────────────────────────── -->
-    <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
-      <div class="section-title" style="margin-bottom:12px">Live Four-Zone Dot Digital Twin</div>
-
-      <div class="panel" id="vt-panel">
-        <div class="panel-header">
-          <div class="panel-title">
-            <div class="panel-title-dot" style="background:var(--accent);animation:pulse 1.5s infinite"></div>
-            Movement Dots From Active Prediction Streams
-          </div>
-          <span class="badge" id="vt-status-badge" style="background:rgba(90,138,170,0.15);color:var(--text-dim);border:1px solid var(--border2)">WAITING</span>
-        </div>
-
-        <div class="panel-body">
-          <div class="dt-zone-grid" id="dt-zone-grid"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ALERTS PAGE -->
-  <div class="page" id="page-alerts">
-    <div class="section-title">Decision Support System — Alerts & Actions</div>
-    <div style="display:grid;grid-template-columns:1fr 300px;gap:16px">
-      <div>
+      <!-- SFM canvas + Intelligent Analysis Panel side-by-side -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
         <div class="panel">
           <div class="panel-header">
-            <div class="panel-title"><div class="panel-title-dot" style="background:var(--red)"></div>Active Alerts</div>
-            <button class="refresh-btn" onclick="loadAlerts()">↻ REFRESH</button>
+            <div class="panel-title">
+              <div class="panel-title-dot" style="background:var(--accent)"></div>CROWD FLOW SIMULATION
+            </div>
+            <div id="flow-scenario-badge" class="flow-scenario-label" style="display:none">IDLE</div>
           </div>
-          <div class="panel-body" id="alerts-full-list"></div>
-        </div>
-      </div>
-      <div>
-        <div class="panel">
-          <div class="panel-header"><div class="panel-title"><div class="panel-title-dot" style="background:var(--green)"></div>Quick Actions</div></div>
           <div class="panel-body">
-            <div id="quick-actions-list"></div>
+            <canvas id="flow-canvas"></canvas>
+            <div class="flow-legend">
+              <div class="flow-legend-swatch" style="background:#007055"></div><span>Safe (&lt;0.8)</span>
+              <div class="flow-legend-swatch" style="background:#2ecc71;margin-left:6px"></div><span>Low (0.8-2)</span>
+              <div class="flow-legend-swatch" style="background:#f9ca24;margin-left:6px"></div><span>Moderate
+                (2-3)</span>
+              <div class="flow-legend-swatch" style="background:#e67e22;margin-left:6px"></div><span>High (3-5)</span>
+              <div class="flow-legend-swatch" style="background:#e74c3c;margin-left:6px"></div><span>Critical
+                (&gt;5)</span>
+              <span style="margin-left:10px;opacity:0.6">↑↓←→ = flow direction</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Intelligent Analysis Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <div class="panel-title-dot" style="background:var(--yellow)"></div>SCENARIO RECOMMENDATIONS
+            </div>
+            <span id="sim-risk-pill"
+              style="display:none;font-family:var(--font-mono);font-size:0.65rem;padding:2px 10px;border-radius:12px;font-weight:700">—</span>
+          </div>
+          <div style="overflow-y:auto;max-height:440px">
+
+            <!-- Analysis summary metrics -->
+            <div id="sim-analysis-metrics"
+              style="display:none;padding:12px 16px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.15)">
+              <div
+                style="font-family:var(--font-mono);font-size:0.58rem;color:var(--text-dim);letter-spacing:2px;margin-bottom:8px">
+                SIMULATION OUTCOME SUMMARY</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="sim-analysis-grid"></div>
+              <div id="sim-outcome-text"
+                style="margin-top:10px;font-size:0.8rem;color:var(--text);line-height:1.6;padding:8px 10px;background:rgba(0,212,255,0.04);border-left:3px solid var(--accent);border-radius:4px">
+              </div>
+            </div>
+
+            <!-- Recommendations list -->
+            <div id="sim-recommendations" style="padding:12px 16px">
+              <div
+                style="color:var(--text-dim);font-family:var(--font-mono);font-size:0.8rem;text-align:center;padding:30px 0">
+                Run a simulation to generate recommendations</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VID-TWIN LIVE ANALYTICS SUBSECTION ─────────────────────────────── -->
+      <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
+        <div class="section-title" style="margin-bottom:12px">Live Analytics — Uploaded Video</div>
+
+        <div class="panel" id="vt-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <div class="panel-title-dot" style="background:var(--accent);animation:pulse 1.5s infinite"></div>
+              Detection + Digital Twin — Video Feed
+            </div>
+            <span class="badge" id="vt-status-badge"
+              style="background:rgba(90,138,170,0.15);color:var(--text-dim);border:1px solid var(--border2)">IDLE</span>
+          </div>
+
+          <div class="vt-upload-row">
+            <div>
+              <div class="field-label">CCTV Video Feed</div>
+              <label class="file-upload-label" for="vt-video-input">
+                &#128193; Choose Video
+                <input type="file" id="vt-video-input" accept="video/*" style="display:none"
+                  onchange="vtOnVideoSelect(this)" />
+              </label>
+              <div id="vt-filename"
+                style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-dim);margin-top:4px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                No file selected</div>
+            </div>
+            <button id="vt-start-btn" class="start-btn" onclick="vtUpload()" disabled>&#9654; Start Live
+              Analytics</button>
+            <button id="vt-stop-btn" class="stop-btn" onclick="vtStop()" style="display:none">&#9632; Stop</button>
+          </div>
+
+          <div class="vt-streams">
+            <!-- ROW 1: Detection Video + Dot Twin side by side -->
+            <div class="vt-stream-card">
+              <div class="vt-stream-title">
+                <div class="vt-stream-title-dot"></div>Detection Video — Zone Split View (6 Zones)
+              </div>
+              <div class="vt-placeholder" id="vt-video-placeholder"><span
+                  class="vt-placeholder-icon">&#127909;</span>Upload a video to start detection</div>
+              <img class="vt-img" id="vt-video-img" style="display:none" alt="Detection Video Stream" />
+            </div>
+            <div class="vt-stream-card">
+              <div class="vt-stream-title">
+                <div class="vt-stream-title-dot" style="background:var(--orange)"></div>Dot Twin — 20&#215;20 Density
+                Grid
+              </div>
+              <div class="vt-placeholder" id="vt-dot-placeholder"><span
+                  class="vt-placeholder-icon">&#128997;</span>Density grid will appear here</div>
+              <img class="vt-img" id="vt-dot-img" style="display:none" alt="Dot Twin Stream" />
+            </div>
+            <!-- ROW 2: Zone Twin + Crowd Count History side by side -->
+            <div class="vt-stream-card">
+              <div class="vt-stream-title">
+                <div class="vt-stream-title-dot" style="background:var(--yellow)"></div>Zone Twin — Crowd Density Map
+              </div>
+              <div class="vt-placeholder" id="vt-zone-placeholder"><span
+                  class="vt-placeholder-icon">&#128506;</span>Zone density map will appear here</div>
+              <img class="vt-img" id="vt-zone-img" style="display:none" alt="Zone Twin Stream" />
+            </div>
+            <div class="vt-stream-card">
+              <div class="vt-stream-title">
+                <div class="vt-stream-title-dot" style="background:var(--green)"></div>Crowd Count History — Time Series
+                Graph
+              </div>
+              <div class="vt-placeholder" id="vt-graph-placeholder"><span
+                  class="vt-placeholder-icon">&#128200;</span>Crowd count history graph will appear here</div>
+              <img class="vt-img" id="vt-graph-img" style="display:none" alt="Crowd Graph Stream" />
+            </div>
+          </div>
+
+          <div class="vt-stats-strip" id="vt-stats-strip" style="display:none">
+            <div class="lm-item">
+              <div class="lm-label">Total Detected</div>
+              <div class="lm-value" id="vt-count">&#8212;</div>
+            </div>
+            <div class="lm-item">
+              <div class="lm-label">Frame #</div>
+              <div class="lm-value" style="color:var(--text-dim);font-size:0.8rem" id="vt-frame">&#8212;</div>
+            </div>
+            <div class="lm-item">
+              <div class="lm-label">Status</div>
+              <div class="lm-value" id="vt-status-txt" style="font-size:0.8rem">&#8212;</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- POST EVENT PAGE -->
-  <div class="page" id="page-postEvent">
-    <div class="section-title">Post-Event Analysis</div>
-    <div class="post-grid">
-      <div class="panel">
-        <div class="panel-header"><div class="panel-title"><div class="panel-title-dot"></div>Density Over Time</div></div>
-        <div class="panel-body">
-          <div class="chart-bar-wrap" id="density-chart"></div>
+    <!-- ALERTS PAGE -->
+    <div class="page" id="page-alerts">
+      <div class="section-title">Decision Support System — Alerts & Actions</div>
+      <div style="display:grid;grid-template-columns:1fr 300px;gap:16px">
+        <div>
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <div class="panel-title-dot" style="background:var(--red)"></div>Active Alerts
+              </div>
+              <button class="refresh-btn" onclick="loadAlerts()">↻ REFRESH</button>
+            </div>
+            <div class="panel-body" id="alerts-full-list"></div>
+          </div>
         </div>
-      </div>
-      <div class="panel">
-        <div class="panel-header"><div class="panel-title"><div class="panel-title-dot" style="background:var(--orange)"></div>Peak Congestion Zones</div></div>
-        <div class="panel-body">
-          <div class="chart-bar-wrap" id="peak-chart"></div>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="panel-header"><div class="panel-title"><div class="panel-title-dot" style="background:var(--green)"></div>Flow Efficiency</div></div>
-        <div class="panel-body">
-          <div class="chart-bar-wrap" id="efficiency-chart"></div>
+        <div>
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <div class="panel-title-dot" style="background:var(--green)"></div>Quick Actions
+              </div>
+            </div>
+            <div class="panel-body">
+              <div id="quick-actions-list"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="panel">
-      <div class="panel-header"><div class="panel-title"><div class="panel-title-dot" style="background:var(--yellow)"></div>Event Timeline</div></div>
-      <div class="panel-body" id="event-timeline"></div>
-    </div>
-  </div>
 
-</main>
-<script>
-const STATIC_ZONES = ['Gate A', 'Gate B', 'Main Hall', 'Concourse'];
-let zoneFiles = {};          // { zoneName: File }
-let eventSources = {};       // { zoneName: EventSource }
-let zoneHistory = {};
-let latestZoneData = {};
-let vtPollInterval = null;
-let liveZone = null;  // which zone card the RTSP stream is currently targeting
 
-// Build per-zone upload cards and zone matrix cards on page load
-function initializeMatrixGrid() {
-  // Zone matrix cards (live analytics display)
-  const container = document.getElementById('zone-matrix-grid');
-  container.innerHTML = '';
-  STATIC_ZONES.forEach((zone, index) => {
-    const id = `Z${String(index + 1).padStart(2, '0')}`;
-    const zid = zone.replace(/\s+/g, '-');
-    container.innerHTML += `
+
+
+  </main>
+  <script>
+    const STATIC_ZONES = ['Gate A', 'Gate B', 'Main Hall', 'Concourse'];
+    let zoneFiles = {};          // { zoneName: File }
+    let eventSources = {};       // { zoneName: EventSource }
+    let zoneHistory = {};
+    let latestZoneData = {};
+    let vtPollInterval = null;
+    let liveZone = null;  // which zone card the RTSP stream is currently targeting
+
+    // Build per-zone upload cards and zone matrix cards on page load
+    function initializeMatrixGrid() {
+      // Zone matrix cards (live analytics display)
+      const container = document.getElementById('zone-matrix-grid');
+      container.innerHTML = '';
+      STATIC_ZONES.forEach((zone, index) => {
+        const id = `Z${String(index + 1).padStart(2, '0')}`;
+        const zid = zone.replace(/\s+/g, '-');
+        container.innerHTML += `
       <div class="panel" id="card-${zid}" style="border:1px solid var(--border);transition:all 0.3s;">
         <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
           <div class="panel-title" style="font-size:1.1rem;color:var(--text-bright)">${zone} <span style="font-size:0.65rem;color:var(--text-dim)">${id}</span></div>
@@ -778,16 +1672,16 @@ function initializeMatrixGrid() {
           </div>
         </div>
       </div>`;
-  });
+      });
 
-  // Per-zone upload cards in pipeline panel
-  const uploadGrid = document.getElementById('zone-upload-grid');
-  if (!uploadGrid) return;
-  uploadGrid.innerHTML = '';
-  STATIC_ZONES.forEach((zone, index) => {
-    const id = `Z${String(index + 1).padStart(2, '0')}`;
-    const zid = zone.replace(/\s+/g, '-');
-    uploadGrid.innerHTML += `
+      // Per-zone upload cards in pipeline panel
+      const uploadGrid = document.getElementById('zone-upload-grid');
+      if (!uploadGrid) return;
+      uploadGrid.innerHTML = '';
+      STATIC_ZONES.forEach((zone, index) => {
+        const id = `Z${String(index + 1).padStart(2, '0')}`;
+        const zid = zone.replace(/\s+/g, '-');
+        uploadGrid.innerHTML += `
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;" id="upload-card-${zid}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div style="font-weight:700;font-size:0.9rem;color:var(--text-bright)">${zone}</div>
@@ -799,222 +1693,222 @@ function initializeMatrixGrid() {
         </label>
         <div style="margin-top:6px;font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim)" id="upload-state-${zid}">IDLE</div>
       </div>`;
-  });
-}
-
-function onZoneFileSelect(input, zone) {
-  const file = input.files[0];
-  if (!file) return;
-  zoneFiles[zone] = file;
-  const zid = zone.replace(/\s+/g, '-');
-  document.getElementById(`fname-${zid}`).textContent = file.name;
-  document.getElementById(`upload-state-${zid}`).textContent = 'READY';
-  document.getElementById(`upload-card-${zid}`).style.borderColor = 'var(--accent)';
-  // Enable start button if at least one file is selected
-  document.getElementById('start-pipeline-btn').disabled = Object.keys(zoneFiles).length === 0;
-}
-
-async function uploadAllVideos() {
-  const zonesToRun = Object.keys(zoneFiles);
-  if (zonesToRun.length === 0) return;
-
-  const startBtn = document.getElementById('start-pipeline-btn');
-  startBtn.disabled = true;
-  startBtn.textContent = `⏳ Uploading ${zonesToRun.length} zone(s)...`;
-  document.getElementById('upload-status-line').textContent = `Uploading ${zonesToRun.length} video(s) and starting predictions simultaneously...`;
-
-  const uploadedStreams = [];
-
-  // Upload all selected videos in parallel first. Streams are opened only after
-  // every selected zone has a backend video path, so zones enter processing
-  // together instead of whichever upload finishes first.
-  const uploads = zonesToRun.map(async zone => {
-    const zid = zone.replace(/\s+/g, '-');
-    document.getElementById(`upload-state-${zid}`).textContent = 'UPLOADING...';
-    const fd = new FormData();
-    fd.append('video', zoneFiles[zone]);
-    fd.append('zone', zone);
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      if (!res.ok) throw new Error(`Upload failed for ${zone}`);
-      const data = await res.json();
-      uploadedStreams.push({ zone, videoPath: data.video_path });
-      document.getElementById(`upload-state-${zid}`).textContent = 'QUEUED';
-      document.getElementById(`upload-card-${zid}`).style.borderColor = '#00ff88';
-    } catch(e) {
-      document.getElementById(`upload-state-${zid}`).textContent = 'ERROR';
-      document.getElementById(`upload-card-${zid}`).style.borderColor = 'var(--red)';
-    }
-  });
-
-  await Promise.allSettled(uploads);
-
-  if (uploadedStreams.length === 0) {
-    startBtn.disabled = false;
-    startBtn.textContent = '▶ Start All Predictions';
-    document.getElementById('upload-status-line').textContent = 'Upload failed. Please check the selected files and try again.';
-    return;
-  }
-
-  document.getElementById('upload-status-line').textContent = `Opening ${uploadedStreams.length} prediction stream(s) together...`;
-  uploadedStreams.forEach(({ zone, videoPath }) => {
-    const zid = zone.replace(/\s+/g, '-');
-    document.getElementById(`upload-state-${zid}`).textContent = 'CONNECTING...';
-    openZoneStream(zone, videoPath);
-  });
-
-  document.getElementById('stop-pipeline-btn').style.display = 'inline-flex';
-  startBtn.style.display = 'none';
-  document.getElementById('upload-status-line').textContent = `${uploadedStreams.length} zone(s) streaming live.`;
-}
-
-// streamUrl — optional: pass the full SSE URL directly (used by testLive for RTSP).
-// When null, constructs the standard upload-video URL from videoPath (unchanged behaviour).
-function openZoneStream(zone, videoPath, streamUrl = null) {
-  if (eventSources[zone]) { eventSources[zone].close(); delete eventSources[zone]; }
-  const zid = zone.replace(/\s+/g, '-');
-
-  const url = streamUrl || `http://127.0.0.1:8000/api/v1/analytics/stream?video_path=${encodeURIComponent(videoPath)}`;
-  const es = new EventSource(url);
-  eventSources[zone] = es;
-
-  function updateZoneTile(data, color = 'var(--accent)') {
-    if (typeof data.current_count === 'number') {
-      document.getElementById(`curr-count-${zid}`).textContent = `👥 ${Math.round(data.current_count)} People`;
-    }
-    if (typeof data.density === 'number') {
-      document.getElementById(`curr-density-${zid}`).textContent = `Density: ${data.density.toFixed(3)} p/m²`;
-    }
-    if (typeof data.avg_speed === 'number') {
-      document.getElementById(`curr-speed-${zid}`).textContent = `📉 Speed: ${data.avg_speed.toFixed(2)} m/s`;
-    }
-    if (typeof data.stagnation === 'number') {
-      document.getElementById(`fore-stag-${zid}`).textContent = `⚠️ Stag: ${Math.round(data.stagnation * 100)}%`;
-    }
-    if (typeof data.confidence_score === 'number') {
-      const pct = Math.round(data.confidence_score * 100);
-      document.getElementById(`conf-val-${zid}`).textContent = `${pct}%`;
-      document.getElementById(`conf-bar-${zid}`).style.width = `${pct}%`;
-      document.getElementById(`conf-bar-${zid}`).style.backgroundColor = color;
-    }
-  }
-
-  es.onmessage = function(event) {
-    const data = JSON.parse(event.data);
-
-    if (data.status === 'starting') {
-      document.getElementById(`badge-${zid}`).textContent = '⏳ STARTING';
-      const st = document.getElementById(`upload-state-${zid}`);
-      if (st) st.textContent = 'STARTING MODEL';
-      return;
+      });
     }
 
-    if (data.status === 'warming_up') {
-      document.getElementById(`badge-${zid}`).textContent = `⏳ WARMUP ${data.seconds_left}s`;
-      const st = document.getElementById(`upload-state-${zid}`);
-      if (st) st.textContent = `WARMUP (${data.seconds_left}s left)`;
-      updateZoneTile(data, '#ffcc00');
-      updateDigitalTwinZone(zone, data);
-      return;
+    function onZoneFileSelect(input, zone) {
+      const file = input.files[0];
+      if (!file) return;
+      zoneFiles[zone] = file;
+      const zid = zone.replace(/\s+/g, '-');
+      document.getElementById(`fname-${zid}`).textContent = file.name;
+      document.getElementById(`upload-state-${zid}`).textContent = 'READY';
+      document.getElementById(`upload-card-${zid}`).style.borderColor = 'var(--accent)';
+      // Enable start button if at least one file is selected
+      document.getElementById('start-pipeline-btn').disabled = Object.keys(zoneFiles).length === 0;
     }
 
-    if (data.status === 'reconnecting') {
-      document.getElementById(`badge-${zid}`).textContent = '🔄 RECONNECTING';
-      document.getElementById('live-status-text').textContent = 'RTSP dropped — reconnecting...';
-      return;
+    async function uploadAllVideos() {
+      const zonesToRun = Object.keys(zoneFiles);
+      if (zonesToRun.length === 0) return;
+
+      const startBtn = document.getElementById('start-pipeline-btn');
+      startBtn.disabled = true;
+      startBtn.textContent = `⏳ Uploading ${zonesToRun.length} zone(s)...`;
+      document.getElementById('upload-status-line').textContent = `Uploading ${zonesToRun.length} video(s) and starting predictions simultaneously...`;
+
+      const uploadedStreams = [];
+
+      // Upload all selected videos in parallel first. Streams are opened only after
+      // every selected zone has a backend video path, so zones enter processing
+      // together instead of whichever upload finishes first.
+      const uploads = zonesToRun.map(async zone => {
+        const zid = zone.replace(/\s+/g, '-');
+        document.getElementById(`upload-state-${zid}`).textContent = 'UPLOADING...';
+        const fd = new FormData();
+        fd.append('video', zoneFiles[zone]);
+        fd.append('zone', zone);
+        try {
+          const res = await fetch('/api/upload', { method: 'POST', body: fd });
+          if (!res.ok) throw new Error(`Upload failed for ${zone}`);
+          const data = await res.json();
+          uploadedStreams.push({ zone, videoPath: data.video_path });
+          document.getElementById(`upload-state-${zid}`).textContent = 'QUEUED';
+          document.getElementById(`upload-card-${zid}`).style.borderColor = '#00ff88';
+        } catch (e) {
+          document.getElementById(`upload-state-${zid}`).textContent = 'ERROR';
+          document.getElementById(`upload-card-${zid}`).style.borderColor = 'var(--red)';
+        }
+      });
+
+      await Promise.allSettled(uploads);
+
+      if (uploadedStreams.length === 0) {
+        startBtn.disabled = false;
+        startBtn.textContent = '▶ Start All Predictions';
+        document.getElementById('upload-status-line').textContent = 'Upload failed. Please check the selected files and try again.';
+        return;
+      }
+
+      document.getElementById('upload-status-line').textContent = `Opening ${uploadedStreams.length} prediction stream(s) together...`;
+      uploadedStreams.forEach(({ zone, videoPath }) => {
+        const zid = zone.replace(/\s+/g, '-');
+        document.getElementById(`upload-state-${zid}`).textContent = 'CONNECTING...';
+        openZoneStream(zone, videoPath);
+      });
+
+      document.getElementById('stop-pipeline-btn').style.display = 'inline-flex';
+      startBtn.style.display = 'none';
+      document.getElementById('upload-status-line').textContent = `${uploadedStreams.length} zone(s) streaming live.`;
     }
 
-    if (!data.predicted_risk_level) return;
+    // streamUrl — optional: pass the full SSE URL directly (used by testLive for RTSP).
+    // When null, constructs the standard upload-video URL from videoPath (unchanged behaviour).
+    function openZoneStream(zone, videoPath, streamUrl = null) {
+      if (eventSources[zone]) { eventSources[zone].close(); delete eventSources[zone]; }
+      const zid = zone.replace(/\s+/g, '-');
 
-    if (!zoneHistory[zone]) zoneHistory[zone] = [];
-    zoneHistory[zone].push({...data, ts: Date.now()});
-    latestZoneData[zone] = data;
-    updateDigitalTwinZone(zone, data);
+      const url = streamUrl || `http://127.0.0.1:8000/api/v1/analytics/stream?video_path=${encodeURIComponent(videoPath)}`;
+      const es = new EventSource(url);
+      eventSources[zone] = es;
 
-    const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
-    const col = riskColors[data.predicted_risk_level] || 'var(--accent)';
+      function updateZoneTile(data, color = 'var(--accent)') {
+        if (typeof data.current_count === 'number') {
+          document.getElementById(`curr-count-${zid}`).textContent = `👥 ${Math.round(data.current_count)} People`;
+        }
+        if (typeof data.density === 'number') {
+          document.getElementById(`curr-density-${zid}`).textContent = `Density: ${data.density.toFixed(3)} p/m²`;
+        }
+        if (typeof data.avg_speed === 'number') {
+          document.getElementById(`curr-speed-${zid}`).textContent = `📉 Speed: ${data.avg_speed.toFixed(2)} m/s`;
+        }
+        if (typeof data.stagnation === 'number') {
+          document.getElementById(`fore-stag-${zid}`).textContent = `⚠️ Stag: ${Math.round(data.stagnation * 100)}%`;
+        }
+        if (typeof data.confidence_score === 'number') {
+          const pct = Math.round(data.confidence_score * 100);
+          document.getElementById(`conf-val-${zid}`).textContent = `${pct}%`;
+          document.getElementById(`conf-bar-${zid}`).style.width = `${pct}%`;
+          document.getElementById(`conf-bar-${zid}`).style.backgroundColor = color;
+        }
+      }
 
-    document.getElementById(`badge-${zid}`).textContent = '● LIVE';
-    document.getElementById(`badge-${zid}`).style.background = 'rgba(0,255,136,0.15)';
-    document.getElementById(`badge-${zid}`).style.color = '#00ff88';
-    const _st = document.getElementById(`upload-state-${zid}`);
-    if (_st) _st.textContent = 'STREAMING';
-    document.getElementById(`card-${zid}`).style.borderColor = col;
-    updateZoneTile(data, col);
-    document.getElementById(`fore-risk-${zid}`).textContent = data.predicted_risk_level.toUpperCase();
-    document.getElementById(`fore-risk-${zid}`).style.color = col;
-  };
+      es.onmessage = function (event) {
+        const data = JSON.parse(event.data);
 
-  es.onerror = function() {
-    const st = document.getElementById(`upload-state-${zid}`);
-    if (st) st.textContent = 'DONE';
-    document.getElementById(`badge-${zid}`).textContent = 'DONE';
-    es.close();
-    delete eventSources[zone];
-    if (zone === liveZone) {
-      liveZone = null;
-      document.getElementById('live-start-btn').style.display = 'inline-flex';
-      document.getElementById('live-stop-btn').style.display = 'none';
-      document.getElementById('live-status-text').textContent = 'Stream ended — click Connect to restart.';
+        if (data.status === 'starting') {
+          document.getElementById(`badge-${zid}`).textContent = '⏳ STARTING';
+          const st = document.getElementById(`upload-state-${zid}`);
+          if (st) st.textContent = 'STARTING MODEL';
+          return;
+        }
+
+        if (data.status === 'warming_up') {
+          document.getElementById(`badge-${zid}`).textContent = `⏳ WARMUP ${data.seconds_left}s`;
+          const st = document.getElementById(`upload-state-${zid}`);
+          if (st) st.textContent = `WARMUP (${data.seconds_left}s left)`;
+          updateZoneTile(data, '#ffcc00');
+          updateDigitalTwinZone(zone, data);
+          return;
+        }
+
+        if (data.status === 'reconnecting') {
+          document.getElementById(`badge-${zid}`).textContent = '🔄 RECONNECTING';
+          document.getElementById('live-status-text').textContent = 'RTSP dropped — reconnecting...';
+          return;
+        }
+
+        if (!data.predicted_risk_level) return;
+
+        if (!zoneHistory[zone]) zoneHistory[zone] = [];
+        zoneHistory[zone].push({ ...data, ts: Date.now() });
+        latestZoneData[zone] = data;
+        updateDigitalTwinZone(zone, data);
+
+        const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
+        const col = riskColors[data.predicted_risk_level] || 'var(--accent)';
+
+        document.getElementById(`badge-${zid}`).textContent = '● LIVE';
+        document.getElementById(`badge-${zid}`).style.background = 'rgba(0,255,136,0.15)';
+        document.getElementById(`badge-${zid}`).style.color = '#00ff88';
+        const _st = document.getElementById(`upload-state-${zid}`);
+        if (_st) _st.textContent = 'STREAMING';
+        document.getElementById(`card-${zid}`).style.borderColor = col;
+        updateZoneTile(data, col);
+        document.getElementById(`fore-risk-${zid}`).textContent = data.predicted_risk_level.toUpperCase();
+        document.getElementById(`fore-risk-${zid}`).style.color = col;
+      };
+
+      es.onerror = function () {
+        const st = document.getElementById(`upload-state-${zid}`);
+        if (st) st.textContent = 'DONE';
+        document.getElementById(`badge-${zid}`).textContent = 'DONE';
+        es.close();
+        delete eventSources[zone];
+        if (zone === liveZone) {
+          liveZone = null;
+          document.getElementById('live-start-btn').style.display = 'inline-flex';
+          document.getElementById('live-stop-btn').style.display = 'none';
+          document.getElementById('live-status-text').textContent = 'Stream ended — click Connect to restart.';
+        }
+      };
     }
-  };
-}
 
-async function stopPipeline() {
-  Object.values(eventSources).forEach(es => es.close());
-  eventSources = {};
-  await fetch('/api/pipeline-stop', { method: 'POST' }).catch(() => {});
+    async function stopPipeline() {
+      Object.values(eventSources).forEach(es => es.close());
+      eventSources = {};
+      await fetch('/api/pipeline-stop', { method: 'POST' }).catch(() => { });
 
-  document.getElementById('start-pipeline-btn').style.display = 'inline-flex';
-  document.getElementById('start-pipeline-btn').disabled = Object.keys(zoneFiles).length === 0;
-  document.getElementById('start-pipeline-btn').textContent = '▶ Start All Predictions';
-  document.getElementById('stop-pipeline-btn').style.display = 'none';
-  document.getElementById('upload-status-line').textContent = 'Stopped. Select videos and click Start All Predictions to restart.';
+      document.getElementById('start-pipeline-btn').style.display = 'inline-flex';
+      document.getElementById('start-pipeline-btn').disabled = Object.keys(zoneFiles).length === 0;
+      document.getElementById('start-pipeline-btn').textContent = '▶ Start All Predictions';
+      document.getElementById('stop-pipeline-btn').style.display = 'none';
+      document.getElementById('upload-status-line').textContent = 'Stopped. Select videos and click Start All Predictions to restart.';
 
-  // Reset upload card states
-  STATIC_ZONES.forEach(zone => {
-    const zid = zone.replace(/\s+/g, '-');
-    const stateEl = document.getElementById(`upload-state-${zid}`);
-    if (stateEl && stateEl.textContent === 'STREAMING') stateEl.textContent = 'READY';
-  });
+      // Reset upload card states
+      STATIC_ZONES.forEach(zone => {
+        const zid = zone.replace(/\s+/g, '-');
+        const stateEl = document.getElementById(`upload-state-${zid}`);
+        if (stateEl && stateEl.textContent === 'STREAMING') stateEl.textContent = 'READY';
+      });
 
-  initializeMatrixGrid();
-}
+      initializeMatrixGrid();
+    }
 
-// Kick off matrix layout rendering immediately on page boot bounds
-window.addEventListener('load', () => {
-  document.getElementById('loader').style.display = 'none';
-  initializeMatrixGrid();
-  ensureDigitalTwinGrid();
-  startDigitalTwinGrid();
-});
-// ── TAB NAVIGATION ────────────────────────────────────────────────────────────
-function showPage(pageName) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + pageName).classList.add('active');
-  event.currentTarget.classList.add('active');
-  if (pageName === 'predictions') loadPredictions();
-  if (pageName === 'alerts') loadAlerts();
-  if (pageName === 'postEvent') loadPostEvent();
-  if (pageName === 'simulation') startDigitalTwinGrid();
-}
+    // Kick off matrix layout rendering immediately on page boot bounds
+    window.addEventListener('load', () => {
+      document.getElementById('loader').style.display = 'none';
+      initializeMatrixGrid();
+      ensureDigitalTwinGrid();
+      startDigitalTwinGrid();
+    });
+    // ── TAB NAVIGATION ────────────────────────────────────────────────────────────
+    function showPage(pageName) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('page-' + pageName).classList.add('active');
+      event.currentTarget.classList.add('active');
+      if (pageName === 'predictions') loadPredictions();
+      if (pageName === 'alerts') loadAlerts();
+      if (pageName === 'postEvent') loadPostEvent();
+      if (pageName === 'simulation') startDigitalTwinGrid();
+    }
 
-// ── PREDICTIONS TAB ───────────────────────────────────────────────────────────
-function loadPredictions() {
-  const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
-  const counts = { Safe: 0, Moderate: 0, High: 0, Critical: 0 };
-  const rows = document.getElementById('pred-rows');
-  rows.innerHTML = '';
+    // ── PREDICTIONS TAB ───────────────────────────────────────────────────────────
+    function loadPredictions() {
+      const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
+      const counts = { Safe: 0, Moderate: 0, High: 0, Critical: 0 };
+      const rows = document.getElementById('pred-rows');
+      rows.innerHTML = '';
 
-  STATIC_ZONES.forEach(zone => {
-    const d = latestZoneData[zone];
-    const risk = d ? d.predicted_risk_level : 'Safe';
-    const score = d ? Math.round(d.confidence_score * 100) : 0;
-    const count = d ? Math.round(d.current_count) : 0;
-    counts[risk] = (counts[risk] || 0) + 1;
-    const col = riskColors[risk] || '#00ff88';
-    rows.innerHTML += `
+      STATIC_ZONES.forEach(zone => {
+        const d = latestZoneData[zone];
+        const risk = d ? d.predicted_risk_level : 'Safe';
+        const score = d ? Math.round(d.confidence_score * 100) : 0;
+        const count = d ? Math.round(d.current_count) : 0;
+        counts[risk] = (counts[risk] || 0) + 1;
+        const col = riskColors[risk] || '#00ff88';
+        rows.innerHTML += `
       <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
         <div style="width:100px;font-weight:600;color:var(--text-bright)">${zone}</div>
         <div style="flex:1;background:var(--surface2);border-radius:4px;height:10px;overflow:hidden">
@@ -1023,370 +1917,765 @@ function loadPredictions() {
         <div style="width:80px;font-family:var(--font-mono);font-size:0.75rem;color:${col}">${risk.toUpperCase()}</div>
         <div style="width:60px;text-align:right;font-family:var(--font-mono);font-size:0.75rem;color:var(--text-dim)">${count} ppl</div>
       </div>`;
-  });
+      });
 
-  document.getElementById('rc-safe').textContent = counts.Safe || 0;
-  document.getElementById('rc-moderate').textContent = counts.Moderate || 0;
-  document.getElementById('rc-high').textContent = counts.High || 0;
-  document.getElementById('rc-critical').textContent = counts.Critical || 0;
+      document.getElementById('rc-safe').textContent = counts.Safe || 0;
+      document.getElementById('rc-moderate').textContent = counts.Moderate || 0;
+      document.getElementById('rc-high').textContent = counts.High || 0;
+      document.getElementById('rc-critical').textContent = counts.Critical || 0;
 
-  // Draw donut chart
-  const canvas = document.getElementById('risk-donut');
-  const ctx = canvas.getContext('2d');
-  const total = STATIC_ZONES.length;
-  const slices = [
-    { val: counts.Safe || 0, col: '#00ff88' },
-    { val: counts.Moderate || 0, col: '#ffcc00' },
-    { val: counts.High || 0, col: '#ff7700' },
-    { val: counts.Critical || 0, col: '#ff2244' },
-  ];
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  let startAngle = -Math.PI / 2;
-  const cx = canvas.width / 2, cy = canvas.height / 2, r = 70, inner = 40;
-  slices.forEach(s => {
-    if (!s.val) return;
-    const sweep = (s.val / total) * 2 * Math.PI;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, r, startAngle, startAngle + sweep);
-    ctx.closePath();
-    ctx.fillStyle = s.col;
-    ctx.fill();
-    startAngle += sweep;
-  });
-  ctx.beginPath();
-  ctx.arc(cx, cy, inner, 0, 2 * Math.PI);
-  ctx.fillStyle = '#060f1a';
-  ctx.fill();
-  ctx.fillStyle = '#c8e6f5';
-  ctx.font = 'bold 18px Rajdhani';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(total + ' zones', cx, cy);
-}
+      // Draw donut chart
+      const canvas = document.getElementById('risk-donut');
+      const ctx = canvas.getContext('2d');
+      const total = STATIC_ZONES.length;
+      const slices = [
+        { val: counts.Safe || 0, col: '#00ff88' },
+        { val: counts.Moderate || 0, col: '#ffcc00' },
+        { val: counts.High || 0, col: '#ff7700' },
+        { val: counts.Critical || 0, col: '#ff2244' },
+      ];
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let startAngle = -Math.PI / 2;
+      const cx = canvas.width / 2, cy = canvas.height / 2, r = 70, inner = 40;
+      slices.forEach(s => {
+        if (!s.val) return;
+        const sweep = (s.val / total) * 2 * Math.PI;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, startAngle, startAngle + sweep);
+        ctx.closePath();
+        ctx.fillStyle = s.col;
+        ctx.fill();
+        startAngle += sweep;
+      });
+      ctx.beginPath();
+      ctx.arc(cx, cy, inner, 0, 2 * Math.PI);
+      ctx.fillStyle = '#060f1a';
+      ctx.fill();
+      ctx.fillStyle = '#c8e6f5';
+      ctx.font = 'bold 18px Rajdhani';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(total + ' zones', cx, cy);
+    }
 
-// ── ALERTS TAB ────────────────────────────────────────────────────────────────
-function loadAlerts() {
-  const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
-  const actions = {
-    High: 'Monitor closely — consider redirecting crowd flow',
-    Critical: 'Immediate action required — deploy staff and open exits',
-    Moderate: 'Keep watch — prepare contingency staff',
-  };
-  const list = document.getElementById('alerts-full-list');
-  const quick = document.getElementById('quick-actions-list');
-  list.innerHTML = '';
-  quick.innerHTML = '';
-  let hasAlerts = false;
+    // ── ALERTS TAB ────────────────────────────────────────────────────────────────
+    function loadAlerts() {
+      const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
+      const actions = {
+        High: 'Monitor closely — consider redirecting crowd flow',
+        Critical: 'Immediate action required — deploy staff and open exits',
+        Moderate: 'Keep watch — prepare contingency staff',
+      };
+      const list = document.getElementById('alerts-full-list');
+      const quick = document.getElementById('quick-actions-list');
+      list.innerHTML = '';
+      quick.innerHTML = '';
+      let hasAlerts = false;
 
-  STATIC_ZONES.forEach(zone => {
-    const d = latestZoneData[zone];
-    if (!d) return;
-    const risk = d.predicted_risk_level;
-    if (risk === 'Safe') return;
-    hasAlerts = true;
-    const col = riskColors[risk];
-    const time = new Date().toLocaleTimeString();
-    list.innerHTML += `
+      STATIC_ZONES.forEach(zone => {
+        const d = latestZoneData[zone];
+        if (!d) return;
+        const risk = d.predicted_risk_level;
+        if (risk === 'Safe') return;
+        hasAlerts = true;
+        const col = riskColors[risk];
+        const time = new Date().toLocaleTimeString();
+        list.innerHTML += `
       <div style="padding:14px;margin-bottom:8px;background:rgba(255,255,255,0.03);border:1px solid ${col}44;border-left:3px solid ${col};border-radius:6px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
           <span style="font-weight:700;color:${col};font-size:1rem">${zone}</span>
           <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim)">${time}</span>
         </div>
-        <div style="font-size:0.85rem;margin-bottom:6px">${risk} risk — ${Math.round(d.current_count)} people, speed ${d.avg_speed.toFixed(2)} m/s, stagnation ${Math.round(d.stagnation*100)}%</div>
+        <div style="font-size:0.85rem;margin-bottom:6px">${risk} risk — ${Math.round(d.current_count)} people, speed ${d.avg_speed.toFixed(2)} m/s, stagnation ${Math.round(d.stagnation * 100)}%</div>
         <div style="font-family:var(--font-mono);font-size:0.7rem;color:${col}">⚡ ${actions[risk] || ''}</div>
       </div>`;
-    quick.innerHTML += `
+        quick.innerHTML += `
       <div style="padding:8px 12px;margin-bottom:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border2);border-radius:4px;font-size:0.82rem">
         <span style="color:${col};font-weight:600">${zone}:</span> ${actions[risk] || ''}
       </div>`;
-  });
+      });
 
-  if (!hasAlerts) {
-    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim);font-family:var(--font-mono)">✅ No active alerts — all zones within safe parameters</div>';
-    quick.innerHTML = '<div style="color:var(--text-dim);font-size:0.82rem;padding:10px">No actions required at this time.</div>';
-  }
-}
-
-// ── POST-EVENT TAB ────────────────────────────────────────────────────────────
-function loadPostEvent() {
-  renderBarChart('density-chart', STATIC_ZONES.map(z => ({
-    label: z,
-    value: latestZoneData[z] ? Math.round(latestZoneData[z].current_count) : 0,
-    color: '#00d4ff'
-  })), 'People Count');
-
-  renderBarChart('peak-chart', STATIC_ZONES.map(z => {
-    const hist = zoneHistory[z] || [];
-    const peak = hist.length ? Math.max(...hist.map(d => d.current_count)) : 0;
-    return { label: z, value: Math.round(peak), color: '#ff7700' };
-  }), 'Peak Count');
-
-  renderBarChart('efficiency-chart', STATIC_ZONES.map(z => ({
-    label: z,
-    value: latestZoneData[z] ? Math.round((1 - latestZoneData[z].stagnation) * 100) : 100,
-    color: '#00ff88'
-  })), '% Efficiency');
-
-  const timeline = document.getElementById('event-timeline');
-  const events = [];
-  STATIC_ZONES.forEach(zone => {
-    const hist = zoneHistory[zone] || [];
-    hist.forEach(d => {
-      if (d.predicted_risk_level === 'High' || d.predicted_risk_level === 'Critical') {
-        events.push({ zone, risk: d.predicted_risk_level, ts: d.ts });
+      if (!hasAlerts) {
+        list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim);font-family:var(--font-mono)">✅ No active alerts — all zones within safe parameters</div>';
+        quick.innerHTML = '<div style="color:var(--text-dim);font-size:0.82rem;padding:10px">No actions required at this time.</div>';
       }
-    });
-  });
-  events.sort((a, b) => a.ts - b.ts);
-  const riskColors = { High: '#ff7700', Critical: '#ff2244', Moderate: '#ffcc00' };
-  timeline.innerHTML = events.length
-    ? events.map(e => `
+    }
+
+    // ── POST-EVENT TAB ────────────────────────────────────────────────────────────
+    function loadPostEvent() {
+      renderBarChart('density-chart', STATIC_ZONES.map(z => ({
+        label: z,
+        value: latestZoneData[z] ? Math.round(latestZoneData[z].current_count) : 0,
+        color: '#00d4ff'
+      })), 'People Count');
+
+      renderBarChart('peak-chart', STATIC_ZONES.map(z => {
+        const hist = zoneHistory[z] || [];
+        const peak = hist.length ? Math.max(...hist.map(d => d.current_count)) : 0;
+        return { label: z, value: Math.round(peak), color: '#ff7700' };
+      }), 'Peak Count');
+
+      renderBarChart('efficiency-chart', STATIC_ZONES.map(z => ({
+        label: z,
+        value: latestZoneData[z] ? Math.round((1 - latestZoneData[z].stagnation) * 100) : 100,
+        color: '#00ff88'
+      })), '% Efficiency');
+
+      const timeline = document.getElementById('event-timeline');
+      const events = [];
+      STATIC_ZONES.forEach(zone => {
+        const hist = zoneHistory[zone] || [];
+        hist.forEach(d => {
+          if (d.predicted_risk_level === 'High' || d.predicted_risk_level === 'Critical') {
+            events.push({ zone, risk: d.predicted_risk_level, ts: d.ts });
+          }
+        });
+      });
+      events.sort((a, b) => a.ts - b.ts);
+      const riskColors = { High: '#ff7700', Critical: '#ff2244', Moderate: '#ffcc00' };
+      timeline.innerHTML = events.length
+        ? events.map(e => `
         <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
           <div style="width:10px;height:10px;border-radius:50%;background:${riskColors[e.risk]};flex-shrink:0"></div>
           <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim)">${new Date(e.ts).toLocaleTimeString()}</div>
           <div style="font-size:0.85rem"><span style="color:${riskColors[e.risk]};font-weight:600">${e.risk}</span> — ${e.zone}</div>
         </div>`).join('')
-    : '<div style="color:var(--text-dim);font-family:var(--font-mono);font-size:0.8rem;padding:20px;text-align:center">No high-risk events recorded yet. Run a pipeline to collect data.</div>';
-}
+        : '<div style="color:var(--text-dim);font-family:var(--font-mono);font-size:0.8rem;padding:20px;text-align:center">No high-risk events recorded yet. Run a pipeline to collect data.</div>';
+    }
 
-function renderBarChart(containerId, data, unit) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  const max = Math.max(...data.map(d => d.value), 1);
-  container.innerHTML = data.map(d => `
+    function renderBarChart(containerId, data, unit) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const max = Math.max(...data.map(d => d.value), 1);
+      container.innerHTML = data.map(d => `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <div style="width:80px;font-size:0.75rem;text-align:right;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.label}</div>
       <div style="flex:1;background:var(--surface2);border-radius:3px;height:18px;overflow:hidden">
-        <div style="width:${(d.value/max)*100}%;height:100%;background:${d.color};transition:width 0.5s;display:flex;align-items:center;padding-left:6px">
+        <div style="width:${(d.value / max) * 100}%;height:100%;background:${d.color};transition:width 0.5s;display:flex;align-items:center;padding-left:6px">
           <span style="font-family:var(--font-mono);font-size:0.6rem;color:#000;font-weight:700">${d.value}</span>
         </div>
       </div>
     </div>`).join('');
-}
-
-// ── DIGITAL TWIN — SIMULATION ─────────────────────────────────────────────────
-async function runSim(scenario, btn) {
-  document.querySelectorAll('.sim-btn').forEach(b => b.style.opacity = '0.5');
-  btn.style.opacity = '1';
-  btn.style.outline = '2px solid var(--accent)';
-
-  const badge = document.getElementById('flow-scenario-badge');
-  badge.style.display = 'inline-block';
-  badge.textContent = scenario.toUpperCase().replace('_', ' ');
-  document.getElementById('sim-result-title').textContent = 'RUNNING SIMULATION...';
-
-  // Start SFM animation immediately — no server needed
-  startSFM(scenario);
-
-  try {
-    const res = await fetch('http://127.0.0.1:8000/api/v1/analytics/simulate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scenario })
-    });
-    const data = await res.json();
-    renderSimResults(data);
-  } catch(e) {
-    document.getElementById('sim-result-title').textContent = 'SFM running · FastAPI offline — zone scores unavailable';
-  }
-  document.querySelectorAll('.sim-btn').forEach(b => { b.style.opacity = '1'; b.style.outline = 'none'; });
-}
-
-function renderSimResults(data) {
-  const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
-  document.getElementById('sim-result-title').textContent = `SCENARIO: ${data.scenario.toUpperCase().replace('_', ' ')} — RESULTS`;
-  const grid = document.getElementById('sim-zone-grid');
-  grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px';
-  grid.innerHTML = data.zones.map(z => `
-    <div style="padding:10px;background:var(--surface2);border:1px solid ${riskColors[z.risk]}44;border-radius:6px;text-align:center">
-      <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:4px">${z.name}</div>
-      <div style="font-size:1.2rem;font-weight:800;color:${riskColors[z.risk]}">${z.score}</div>
-      <div style="font-family:var(--font-mono);font-size:0.6rem;color:${riskColors[z.risk]}">${z.risk.toUpperCase()}</div>
-    </div>`).join('');
-
-  const rec = document.getElementById('sim-recommendations');
-  rec.innerHTML = data.recommendations.map((r, i) => `
-    <div style="padding:10px 12px;margin-bottom:6px;background:rgba(0,212,255,0.04);border:1px solid var(--border2);border-radius:4px;font-size:0.85rem">
-      <span style="color:var(--accent);font-family:var(--font-mono);font-size:0.7rem">[${String(i+1).padStart(2,'0')}]</span> ${r}
-    </div>`).join('');
-
-  drawFlowCanvas(data.zones);
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-//  SOCIAL FORCE MODEL — ported from crowd_digital_twin.py
-// ═══════════════════════════════════════════════════════════════════════
-const _SFM = {
-  DT:0.05, MASS:80, TAU:0.5,
-  A:2000, B:0.08, AW:1500, BW:0.05,
-  DESIRE:1.4, R:0.3,
-  W:40, H:24   // arena metres
-};
-
-let _sfmAgents=[], _sfmWalls=[], _sfmWalls2=null;
-let _sfmLabel='', _sfmFrame=0, _sfmDesire=_SFM.DESIRE;
-let _sfmExtra=false, _sfmRAF=null, _sfmScenario=null;
-
-class _Agent {
-  constructor(x,y,gx,gy){ this.p=[x,y]; this.v=[0,0]; this.g=[gx,gy]; this.on=true; }
-}
-
-function _rand(a,b){ return a+Math.random()*(b-a); }
-function _agents(n,sx,sy,gx,gy){
-  const r=[];
-  for(let i=0;i<n;i++) r.push(new _Agent(_rand(...sx),_rand(...sy),_rand(...gx),_rand(...gy)));
-  return r;
-}
-
-function _sfmTick(){
-  const active=_sfmAgents.filter(a=>a.on);
-  for(let i=0;i<active.length;i++){
-    const ag=active[i];
-    const dx=ag.g[0]-ag.p[0], dy=ag.g[1]-ag.p[1];
-    const d=Math.sqrt(dx*dx+dy*dy);
-    if(d<0.5){ ag.on=false; ag.v=[0,0]; continue; }
-    const ex=dx/d, ey=dy/d;
-    let fx=(_SFM.MASS/_SFM.TAU)*(_sfmDesire*ex-ag.v[0]);
-    let fy=(_SFM.MASS/_SFM.TAU)*(_sfmDesire*ey-ag.v[1]);
-    // pedestrian repulsion
-    for(let j=0;j<active.length;j++){
-      if(i===j) continue;
-      const o=active[j];
-      let ex2=ag.p[0]-o.p[0], ey2=ag.p[1]-o.p[1];
-      let dd=Math.sqrt(ex2*ex2+ey2*ey2)||1e-6;
-      const m=_SFM.A*Math.exp((_SFM.R*2-dd)/_SFM.B);
-      fx+=m*ex2/dd; fy+=m*ey2/dd;
     }
-    // wall repulsion
-    for(const [wx1,wy1,wx2,wy2] of _sfmWalls){
-      const wdx=wx2-wx1, wdy=wy2-wy1, wl2=wdx*wdx+wdy*wdy;
-      if(wl2<1e-12) continue;
-      let t=((ag.p[0]-wx1)*wdx+(ag.p[1]-wy1)*wdy)/wl2;
-      t=Math.max(0,Math.min(1,t));
-      const cx=wx1+t*wdx, cy=wy1+t*wdy;
-      let ex2=ag.p[0]-cx, ey2=ag.p[1]-cy;
-      let dw=Math.sqrt(ex2*ex2+ey2*ey2)||1e-6;
-      const m=_SFM.AW*Math.exp((_SFM.R-dw)/_SFM.BW);
-      fx+=m*ex2/dw; fy+=m*ey2/dw;
+
+    // ── DIGITAL TWIN — SIMULATION ─────────────────────────────────────────────────
+
+    // Scenario-specific AI recommendation + metrics data (fully offline)
+    const SIM_DATA = {
+      gate_closure: {
+        zones: [
+          { name: 'Gate A (Closed)', score: 0, risk: 'Safe', density: 0.0, speed: 0.0, queue: 0 },
+          { name: 'Gate B', score: 82, risk: 'Critical', density: 6.8, speed: 0.3, queue: 94 },
+          { name: 'Main Hall', score: 67, risk: 'High', density: 4.2, speed: 0.6, queue: 41 },
+          { name: 'Concourse', score: 55, risk: 'Moderate', density: 2.9, speed: 0.9, queue: 22 },
+        ],
+        metrics: { peakDensity: 6.8, avgSpeed: 0.55, bottlenecks: 2, throughput: 38, redistribTime: '5.0s', utilization: '82%', maxQueue: 94 },
+        riskLevel: 'High',
+        outcome: 'Gate closure caused severe congestion at Gate B, which absorbed 83% of redirected traffic. Redistribution took ~5s with notable queue build-up. The remaining open gates were insufficient to handle peak load efficiently.',
+        recommendations: [
+          'Open an additional temporary entry gate adjacent to Gate B immediately',
+          'Deploy crowd-management staff at Gate B and Concourse entrance',
+          'Install dynamic digital signage directing visitors to less congested gates',
+          'Widen or remove temporary barriers near Gate B for faster throughput',
+          'Stagger visitor arrivals via timed entry slots to reduce peak pressure',
+          'Maintain at least one backup gate operational during high-attendance periods',
+          'Implement one-way pedestrian flow in the Gate B approach corridor',
+        ],
+      },
+      increased_inflow: {
+        zones: [
+          { name: 'Gate A', score: 74, risk: 'High', density: 5.1, speed: 0.5, queue: 62 },
+          { name: 'Gate B', score: 69, risk: 'High', density: 4.7, speed: 0.6, queue: 55 },
+          { name: 'Main Hall', score: 91, risk: 'Critical', density: 7.9, speed: 0.2, queue: 108 },
+          { name: 'Concourse', score: 78, risk: 'High', density: 5.8, speed: 0.4, queue: 74 },
+        ],
+        metrics: { peakDensity: 7.9, avgSpeed: 0.42, bottlenecks: 4, throughput: 27, redistribTime: '—', pctOverSafe: '75%', avgTravel: '18.2s' },
+        riskLevel: 'Critical',
+        outcome: 'The inflow surge pushed Main Hall to critical density (7.9 p/m²). Average pedestrian speed dropped 70% below normal. Four bottlenecks were detected. 75% of monitored area is operating above safe density limits — immediate intervention required.',
+        recommendations: [
+          'Increase exit lane capacity – open all available gates',
+          'Pre-position marshals at junction and merge points',
+          'Slow down ticket scanning rate to regulate entry inflow',
+          'Enable overflow holding zones in North and South wings',
+          'Trigger congestion prediction alerts for next 10 minutes',
+        ],
+      },
+      evacuation: {
+        zones: [
+          { name: 'Exit 1', score: 88, risk: 'Critical', density: 7.2, speed: 1.8, queue: 112 },
+          { name: 'Exit 2', score: 73, risk: 'High', density: 4.9, speed: 1.6, queue: 67 },
+          { name: 'Main Hall', score: 45, risk: 'Moderate', density: 2.1, speed: 1.4, queue: 18 },
+          { name: 'Concourse', score: 38, risk: 'Moderate', density: 1.6, speed: 1.5, queue: 11 },
+        ],
+        metrics: { totalEvacTime: '43.2s', avgPerPerson: '31.5s', exitUtil: '88%/73%', maxQueue: 112, peakDensity: 7.2, slowestZone: 'Exit 1', pctIn60s: '71%' },
+        riskLevel: 'High',
+        outcome: 'Exit 1 became a severe bottleneck handling 61% of evacuees with queue lengths of 112. Only 71% of pedestrians evacuated within the 60-second target safety window. Exit 2 was underutilised. Evacuation routing improvements are recommended.',
+        recommendations: [
+          'Add a second emergency exit adjacent to Exit 1 to relieve the primary bottleneck',
+          'Increase Exit 1 width — the current configuration causes critical queuing',
+          'Remove all obstacles and temporary furniture blocking evacuation routes',
+          'Improve emergency signage and add illuminated exit indicators at knee-height',
+          'Assign two staff at Exit 1 to guide pedestrians toward underutilised Exit 2',
+          'Redesign evacuation routing to distribute crowd flow more evenly across exits',
+          'Conduct mandatory monthly evacuation drills for all venue staff',
+        ],
+      },
+    };
+
+    // Live SFM stats accumulated during animation
+    let _sfmStats = { exited: 0, startCount: 0, speedSum: 0, speedSamples: 0, maxLocalDensity: 0 };
+
+    async function runSim(scenario, btn) {
+      document.querySelectorAll('.sim-btn').forEach(b => {
+        b.style.opacity = '0.6'; b.style.outline = 'none';
+        b.classList.remove('active-sim');
+      });
+      btn.style.opacity = '1';
+      btn.classList.add('active-sim');
+
+      const badge = document.getElementById('flow-scenario-badge');
+      badge.style.display = 'inline-block';
+      badge.innerHTML = '<span style="color:#ff4757;margin-right:6px">☑</span>' + scenario.toUpperCase().replace(/_/g, ' ');
+
+      document.getElementById('sim-result-title').textContent = 'RUNNING SIMULATION...';
+      document.getElementById('sim-zone-grid').innerHTML = '';
+
+      // Hide analysis panel while new sim runs
+      document.getElementById('sim-analysis-metrics').style.display = 'none';
+      document.getElementById('sim-risk-pill').style.display = 'none';
+      document.getElementById('sim-recommendations').innerHTML =
+        '<div style="color:var(--text-dim);font-family:var(--font-mono);font-size:0.8rem;text-align:center;padding:30px 0">Simulation running — analysis will appear here…</div>';
+
+      // Show live metrics strip
+      const metricsStrip = document.getElementById('sim-live-metrics');
+      metricsStrip.style.display = 'block';
+
+      // Start SFM animation
+      startSFM(scenario);
+
+      // After a simulated analysis delay, render results from our local data
+      setTimeout(() => renderSimResults(scenario), 3200);
+
+      document.querySelectorAll('.sim-btn').forEach(b => { b.style.opacity = '1'; });
     }
-    ag.v[0]+=(fx/_SFM.MASS)*_SFM.DT; ag.v[1]+=(fy/_SFM.MASS)*_SFM.DT;
-    const spd=Math.sqrt(ag.v[0]**2+ag.v[1]**2);
-    if(spd>3.5){ag.v[0]=ag.v[0]/spd*3.5; ag.v[1]=ag.v[1]/spd*3.5;}
-    ag.p[0]+=ag.v[0]*_SFM.DT; ag.p[1]+=ag.v[1]*_SFM.DT;
-  }
-}
 
-function _sfmDraw(){
-  const canvas=document.getElementById('flow-canvas');
-  if(!canvas) return;
-  const cw=canvas.width, ch=canvas.height;
-  const sx=cw/_SFM.W, sy=ch/_SFM.H;
-  const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#080c12'; ctx.fillRect(0,0,cw,ch);
-  // grid
-  ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
-  for(let x=0;x<cw;x+=sx){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,ch);ctx.stroke();}
-  for(let y=0;y<ch;y+=sy){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cw,y);ctx.stroke();}
-  // walls
-  ctx.strokeStyle='#4466ff'; ctx.lineWidth=3;
-  for(const [wx1,wy1,wx2,wy2] of _sfmWalls){
-    ctx.beginPath(); ctx.moveTo(wx1*sx,wy1*sy); ctx.lineTo(wx2*sx,wy2*sy); ctx.stroke();
-  }
-  // agents
-  const R=Math.max(_SFM.R*sx,4);
-  for(const ag of _sfmAgents){
-    if(!ag.on) continue;
-    const px=ag.p[0]*sx, py=ag.p[1]*sy;
-    const spd=Math.sqrt(ag.v[0]**2+ag.v[1]**2);
-    const col=spd<0.5?'#00cc55':spd<1.2?'#ffaa00':'#ff2244';
-    ctx.beginPath(); ctx.arc(px,py,R,0,Math.PI*2);
-    ctx.fillStyle=col+'bb'; ctx.fill();
-    ctx.strokeStyle=col; ctx.lineWidth=1; ctx.stroke();
-    // arrow
-    if(spd>0.05){
-      const vl=16, vm=Math.sqrt(ag.v[0]**2+ag.v[1]**2);
-      const ex=ag.v[0]/vm, ey=ag.v[1]/vm;
-      const tx=px+ex*vl, ty=py+ey*vl;
-      ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(tx,ty);
-      ctx.strokeStyle=col+'88'; ctx.lineWidth=1.5; ctx.stroke();
-      const ah=5,aw=3;
-      ctx.beginPath();
-      ctx.moveTo(tx,ty);
-      ctx.lineTo(tx-ex*ah-ey*aw, ty-ey*ah+ex*aw);
-      ctx.lineTo(tx-ex*ah+ey*aw, ty-ey*ah-ex*aw);
-      ctx.closePath(); ctx.fillStyle=col+'88'; ctx.fill();
+    function renderSimResults(scenario) {
+      const data = SIM_DATA[scenario];
+      if (!data) return;
+      const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
+
+      // Zone score strip
+      document.getElementById('sim-result-title').textContent =
+        `SCENARIO: ${scenario.toUpperCase().replace(/_/g, ' ')} — RESULTS`;
+      const grid = document.getElementById('sim-zone-grid');
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px';
+      grid.innerHTML = data.zones.map(z => {
+        const col = riskColors[z.risk];
+        return `
+        <div style="padding:12px 10px;background:var(--surface2);border:1px solid ${col}44;border-radius:6px;text-align:center">
+          <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:5px;font-family:var(--font-mono)">${z.name}</div>
+          <div style="font-size:1.5rem;font-weight:800;color:${col};line-height:1">${z.score}</div>
+          <div style="font-family:var(--font-mono);font-size:0.58rem;color:${col};margin-top:3px">${z.risk.toUpperCase()}</div>
+          <div style="margin-top:6px;font-size:0.7rem;color:var(--text-dim)">${z.density} p/m² · ${z.speed} m/s</div>
+          <div style="width:100%;height:4px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden">
+            <div style="width:${z.score}%;height:100%;background:${col};transition:width 0.6s ease"></div>
+          </div>
+        </div>`;
+      }).join('');
+
+      // Overall risk pill
+      const pill = document.getElementById('sim-risk-pill');
+      const pillCol = riskColors[data.riskLevel] || 'var(--accent)';
+      pill.textContent = `RISK: ${data.riskLevel.toUpperCase()}`;
+      pill.style.cssText = `display:inline-block;font-family:var(--font-mono);font-size:0.65rem;padding:3px 12px;border-radius:12px;font-weight:700;background:${pillCol}22;color:${pillCol};border:1px solid ${pillCol}66`;
+
+      // Intelligent Analysis Metrics grid
+      const metricsEl = document.getElementById('sim-analysis-metrics');
+      metricsEl.style.display = 'block';
+      const m = data.metrics;
+      const metricItems = Object.entries(m).map(([k, v]) => {
+        const labels = {
+          peakDensity: 'Peak Density (p/m²)', avgSpeed: 'Avg Speed (m/s)',
+          bottlenecks: 'Bottlenecks', throughput: 'Throughput /min',
+          redistribTime: 'Redistrib. Time', utilization: 'Gate Utilization',
+          maxQueue: 'Max Queue Length', pctOverSafe: '% Over Safe Limit',
+          avgTravel: 'Avg Travel Time', totalEvacTime: 'Total Evac Time',
+          avgPerPerson: 'Avg Per Person', exitUtil: 'Exit Utilization',
+          slowestZone: 'Slowest Zone', pctIn60s: '% Evacuated ≤60s',
+        };
+        const valCol = (k === 'bottlenecks' && v > 2) ? 'var(--critical)'
+          : (k === 'avgSpeed' && v < 0.5) ? 'var(--orange)'
+            : (k === 'peakDensity' && v > 5) ? 'var(--critical)'
+              : 'var(--accent)';
+        return `<div style="padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:5px">
+          <div style="font-family:var(--font-mono);font-size:0.56rem;color:var(--text-dim);margin-bottom:3px;letter-spacing:1px">${labels[k] || k.toUpperCase()}</div>
+          <div style="font-family:var(--font-mono);font-size:0.95rem;font-weight:bold;color:${valCol}">${v}</div>
+        </div>`;
+      }).join('');
+      document.getElementById('sim-analysis-grid').innerHTML = metricItems;
+      document.getElementById('sim-outcome-text').textContent = data.outcome;
+
+      // Recommendations list
+      const rec = document.getElementById('sim-recommendations');
+      const getRecIcon = (text) => {
+        const lower = text.toLowerCase();
+        if (lower.includes('gate') || lower.includes('exit') || lower.includes('lane')) return '🚪';
+        if (lower.includes('marshal') || lower.includes('staff') || lower.includes('deploy') || lower.includes('position')) return '🦺';
+        if (lower.includes('ticket') || lower.includes('scan') || lower.includes('rate') || lower.includes('inflow')) return '💳';
+        if (lower.includes('zone') || lower.includes('overflow') || lower.includes('holding') || lower.includes('pathway') || lower.includes('routing')) return '📍';
+        if (lower.includes('alert') || lower.includes('predict') || lower.includes('warn') || lower.includes('congestion')) return '📊';
+        return '🦺'; // Default icon
+      };
+
+      rec.innerHTML = `
+        ${data.recommendations.map((r, i) => {
+        const icon = getRecIcon(r);
+        return `
+          <div style="padding:14px 18px;margin-bottom:12px;background:rgba(5,11,22,0.5);border:1px solid var(--border2);border-radius:8px;font-size:0.86rem;display:flex;align-items:center;gap:14px">
+            <span style="font-size:1.15rem;flex-shrink:0;display:flex;align-items:center;justify-content:center">${icon}</span>
+            <span style="color:var(--text);font-weight:400;line-height:1.4">${r}</span>
+          </div>`;
+      }).join('')}`;
     }
-  }
-  // HUD
-  const alive=_sfmAgents.filter(a=>a.on).length;
-  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(8,8,230,68);
-  ctx.textAlign='left';
-  ctx.fillStyle='#ffdd00'; ctx.font='bold 13px monospace'; ctx.fillText(_sfmLabel,14,26);
-  ctx.fillStyle='#aabbcc'; ctx.font='11px monospace';
-  ctx.fillText(`Active agents: ${alive}`,14,44);
-  ctx.fillText(`t = ${(_sfmFrame*_SFM.DT).toFixed(1)}s`,14,62);
-}
 
-function _sfmLoop(){
-  const canvas=document.getElementById('flow-canvas');
-  if(!canvas) return;
-  canvas.width=canvas.offsetWidth||canvas.parentElement.clientWidth-32;
-  canvas.height=380;
-  const t=_sfmFrame*_SFM.DT;
-  // scenario events
-  if(_sfmScenario==='gate_closure'&&t>=5.0&&_sfmWalls2){_sfmWalls=_sfmWalls2;_sfmWalls2=null;}
-  if(_sfmScenario==='increased_inflow'&&t>=4.0&&!_sfmExtra){
-    _sfmAgents.push(..._agents(50,[0.5,3],[2,_SFM.H-2],[_SFM.W-2,_SFM.W-1],[2,_SFM.H-2]));
-    _sfmExtra=true;
-  }
-  if(_sfmScenario==='evacuation'&&!_sfmExtra){_sfmDesire=_SFM.DESIRE*2;_sfmExtra=true;}
-  _sfmTick(); _sfmFrame++;
-  if(_sfmAgents.every(a=>!a.on)) _sfmInit(_sfmScenario);  // auto-reset
-  _sfmDraw();
-  _sfmRAF=requestAnimationFrame(_sfmLoop);
-}
+    // ═══════════════════════════════════════════════════════════════════════
+    //  SOCIAL FORCE MODEL
+    // ═══════════════════════════════════════════════════════════════════════
+    const _SFM = {
+      DT: 0.05, MASS: 80, TAU: 0.5,
+      A: 2000, B: 0.08, AW: 1500, BW: 0.05,
+      DESIRE: 1.4, R: 0.3,
+      W: 40, H: 24
+    };
 
-function _sfmInit(scenario){
-  _sfmScenario=scenario; _sfmFrame=0; _sfmExtra=false; _sfmDesire=_SFM.DESIRE;
-  _sfmWalls2=null;
-  const H=_SFM.H, W=_SFM.W, gc=H/2;
-  if(scenario==='gate_closure'){
-    _sfmLabel='Gate-Close Scenario';
-    _sfmAgents=_agents(60,[1,15],[2,H-2],[W-1,W-0.5],[gc-2,gc+2]);
-    _sfmWalls=[[0,0,W,0],[0,H,W,H],[0,0,0,H],[W,0,W,gc-3],[W,gc+3,W,H]];
-    _sfmWalls2=[[0,0,W,0],[0,H,W,H],[0,0,0,H],[W,0,W,gc-1.5],[W,gc+1.5,W,H]];
-  } else if(scenario==='increased_inflow'){
-    _sfmLabel='Inflow-Surge Scenario';
-    _sfmAgents=_agents(30,[1,8],[2,H-2],[W-2,W-1],[2,H-2]);
-    _sfmWalls=[[0,0,W,0],[0,H,W,H],[0,0,0,H],[W,0,W,H/2-3],[W,H/2+3,W,H]];
-  } else {
-    _sfmLabel='Emergency Evacuation';
-    _sfmAgents=_agents(80,[5,W-5],[5,H-5],[W-1,W-0.5],[H-3,H-1]);
-    _sfmWalls=[[0,0,W,0],[0,H,W,H],[0,0,0,H],[W,0,W,H-4]];
-  }
-}
+    let _sfmAgents = [], _sfmWalls = [], _sfmWalls2 = null;
+    let _sfmLabel = '', _sfmFrame = 0, _sfmDesire = _SFM.DESIRE;
+    let _sfmExtra = false, _sfmRAF = null, _sfmScenario = null;
+    let _sfmExtraWave2 = false;
 
-function startSFM(scenario){
-  if(_sfmRAF){cancelAnimationFrame(_sfmRAF);_sfmRAF=null;}
-  _sfmInit(scenario);
-  _sfmLoop();
-}
+    class _Agent {
+      constructor(x, y, gx, gy) {
+        this.p = [x, y]; this.v = [0, 0]; this.g = [gx, gy];
+        this.on = true; this.exitedAt = -1;
+      }
+    }
 
-function drawFlowCanvas(zones){ /* replaced by SFM — called but intentionally empty */ }
+    function _rand(a, b) { return a + Math.random() * (b - a); }
+    function _makeAgents(n, sx, sy, gx, gy) {
+      const r = [];
+      for (let i = 0; i < n; i++)
+        r.push(new _Agent(_rand(...sx), _rand(...sy), _rand(...gx), _rand(...gy)));
+      return r;
+    }
 
-// ── FOUR-ZONE LIVE DOT DIGITAL TWIN ──────────────────────────────────────────
-let dtAnimationFrame = null;
-const dtState = {};
+    function _sfmTick() {
+      const active = _sfmAgents.filter(a => a.on);
+      for (let i = 0; i < active.length; i++) {
+        const ag = active[i];
+        const dx = ag.g[0] - ag.p[0], dy = ag.g[1] - ag.p[1];
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 0.5) { ag.on = false; ag.exitedAt = _sfmFrame; ag.v = [0, 0]; continue; }
+        const ex = dx / d, ey = dy / d;
+        let fx = (_SFM.MASS / _SFM.TAU) * (_sfmDesire * ex - ag.v[0]);
+        let fy = (_SFM.MASS / _SFM.TAU) * (_sfmDesire * ey - ag.v[1]);
+        for (let j = 0; j < active.length; j++) {
+          if (i === j) continue;
+          const o = active[j];
+          let ex2 = ag.p[0] - o.p[0], ey2 = ag.p[1] - o.p[1];
+          let dd = Math.sqrt(ex2 * ex2 + ey2 * ey2) || 1e-6;
+          const m = _SFM.A * Math.exp((_SFM.R * 2 - dd) / _SFM.B);
+          fx += m * ex2 / dd; fy += m * ey2 / dd;
+        }
+        for (const [wx1, wy1, wx2, wy2] of _sfmWalls) {
+          const wdx = wx2 - wx1, wdy = wy2 - wy1, wl2 = wdx * wdx + wdy * wdy;
+          if (wl2 < 1e-12) continue;
+          let t = ((ag.p[0] - wx1) * wdx + (ag.p[1] - wy1) * wdy) / wl2;
+          t = Math.max(0, Math.min(1, t));
+          const cx2 = wx1 + t * wdx, cy2 = wy1 + t * wdy;
+          let ex2 = ag.p[0] - cx2, ey2 = ag.p[1] - cy2;
+          let dw = Math.sqrt(ex2 * ex2 + ey2 * ey2) || 1e-6;
+          const m = _SFM.AW * Math.exp((_SFM.R - dw) / _SFM.BW);
+          fx += m * ex2 / dw; fy += m * ey2 / dw;
+        }
+        ag.v[0] += (fx / _SFM.MASS) * _SFM.DT; ag.v[1] += (fy / _SFM.MASS) * _SFM.DT;
+        const spd = Math.sqrt(ag.v[0] ** 2 + ag.v[1] ** 2);
+        if (spd > 3.5) { ag.v[0] = ag.v[0] / spd * 3.5; ag.v[1] = ag.v[1] / spd * 3.5; }
+        ag.p[0] += ag.v[0] * _SFM.DT; ag.p[1] += ag.v[1] * _SFM.DT;
+      }
+    }
 
-function ensureDigitalTwinGrid() {
-  const grid = document.getElementById('dt-zone-grid');
-  if (!grid || grid.dataset.ready === '1') return;
-  grid.innerHTML = STATIC_ZONES.map((zone, index) => {
-    const zid = zone.replace(/\s+/g, '-');
-    const id = `Z${String(index + 1).padStart(2, '0')}`;
-    dtState[zone] = { dots: [], targetDots: [], lastCount: 0, lastSpeed: 0, status: 'WAITING' };
-    return `
+    // Build 24×12 density grid using raw counts + smooth scenario flow fields
+    function _computeDensityGrid() {
+      const GW = 24, GH = 12;
+      const cells = Array.from({ length: GH }, () => new Array(GW).fill(0));
+      const active = _sfmAgents.filter(a => a.on);
+      const W = _SFM.W, H = _SFM.H;
+      for (const ag of active) {
+        const ci = Math.min(GW - 1, Math.floor((ag.p[0] / W) * GW));
+        const ri = Math.min(GH - 1, Math.floor((ag.p[1] / H) * GH));
+        cells[ri][ci]++;
+      }
+      // Smooth (Gaussian blur 1-pass) so adjacent cells bleed a bit for visible coloring
+      const smoothed = Array.from({ length: GH }, () => new Array(GW).fill(0));
+      for (let r = 0; r < GH; r++) {
+        for (let c = 0; c < GW; c++) {
+          let sum = 0, cnt = 0;
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              const nr = r + dr, nc = c + dc;
+              if (nr >= 0 && nr < GH && nc >= 0 && nc < GW) {
+                const w = (dr === 0 && dc === 0) ? 4 : (Math.abs(dr) + Math.abs(dc) === 1 ? 2 : 1);
+                sum += cells[nr][nc] * w;
+                cnt += w;
+              }
+            }
+          }
+          smoothed[r][c] = sum / cnt;
+        }
+      }
+      let maxD = 0;
+      const bottlenecks = [];
+      for (let r = 0; r < GH; r++)
+        for (let c = 0; c < GW; c++) {
+          if (smoothed[r][c] > maxD) maxD = smoothed[r][c];
+          if (smoothed[r][c] > 4.5) bottlenecks.push({ r, c });
+        }
+      return { cells: smoothed, bottlenecks, maxD, GW, GH };
+    }
+
+    // Returns a unit-vector [vx,vy] for a given cell based on scenario flow field
+    function _scenarioFlowAt(c, r, GW, GH) {
+      const nx = c / (GW - 1); // 0..1 left→right
+      const ny = r / (GH - 1); // 0..1 top→bottom
+      const t = _sfmFrame * _SFM.DT;
+
+      if (_sfmScenario === 'increased_inflow') {
+        // Crowd flows from left (entry) toward right (exit), with congestion funneling center
+        const targetNy = 0.5; // exit is center-right
+        const dx = 1 - nx;    // always rightward
+        const dy = targetNy - ny;
+        // Near center corridor (barrier zone), flow converges more
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        return [dx / len, dy / len];
+
+      } else if (_sfmScenario === 'gate_closure') {
+        const gateClosed = t >= 5.0;
+        // Before closure: split flow — top half → top-right gate, bottom half → bottom-right gate
+        // After closure: all → bottom-right gate
+        let targetNy;
+        if (gateClosed) {
+          targetNy = 0.75;
+        } else {
+          targetNy = ny < 0.5 ? 0.3 : 0.75;
+        }
+        const dx = 1 - nx;
+        const dy = targetNy - ny;
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        return [dx / len, dy / len];
+
+      } else { // evacuation
+        // Two exits top-right and bottom-right — each half of crowd flows to nearest
+        const targetNy = ny < 0.5 ? 0.18 : 0.82;
+        const dx = 1 - nx;
+        const dy = targetNy - ny;
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        return [dx / len, dy / len];
+      }
+    }
+
+    function _sfmDraw() {
+      const canvas = document.getElementById('flow-canvas');
+      if (!canvas) return;
+      const cw = canvas.width, ch = canvas.height;
+      const ctx = canvas.getContext('2d');
+      const W = _SFM.W, H = _SFM.H;
+
+      // Background
+      ctx.fillStyle = '#050b12';
+      ctx.fillRect(0, 0, cw, ch);
+
+      const { cells, bottlenecks, maxD, GW, GH } = _computeDensityGrid();
+      const cellW = cw / GW;
+      const cellH = ch / GH;
+
+      // --- Color scale: use raw agent-count per cell (smoothed).
+      // Thresholds (in agents/cell) tuned for 40-120 agents across 288 cells.
+      // Typical: 0 agents=safe, ~0.3=low, ~0.7=moderate, ~1.5=high, >=3=critical
+      function densityColor(d) {
+        // d is smoothed agent count per cell (fractional)
+        if (d < 0.15) return '#007055';       // Safe (dark teal)
+        if (d < 0.35) return '#00b894';       // Safe-Low (teal)
+        if (d < 0.65) return '#2ecc71';       // Low (green)
+        if (d < 1.2) return '#f9ca24';       // Moderate (yellow)
+        if (d < 2.2) return '#e67e22';       // High (orange)
+        return '#e74c3c';                     // Critical (red)
+      }
+
+      // Find labels: highest-density cells in 3 horizontal zones
+      let maxLeft = { d: -1, r: 0, c: 0 };
+      let maxMid = { d: -1, r: 0, c: 0 };
+      let maxRight = { d: -1, r: 0, c: 0 };
+      for (let r = 0; r < GH; r++) {
+        for (let c = 0; c < GW; c++) {
+          const d = cells[r][c];
+          if (c <= 7 && d > maxLeft.d) maxLeft = { d, r, c };
+          if (c >= 8 && c <= 15 && d > maxMid.d) maxMid = { d, r, c };
+          if (c >= 16 && d > maxRight.d) maxRight = { d, r, c };
+        }
+      }
+
+      // Draw each grid cell
+      for (let r = 0; r < GH; r++) {
+        for (let c = 0; c < GW; c++) {
+          const d = cells[r][c];
+          const col = densityColor(d);
+
+          const x = c * cellW + 1;
+          const y = r * cellH + 1;
+          const bw = cellW - 2;
+          const bh = cellH - 2;
+          const radius = 3;
+
+          ctx.fillStyle = col;
+          if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(x, y, bw, bh, radius);
+            ctx.fill();
+          } else {
+            ctx.fillRect(x, y, bw, bh);
+          }
+
+          // Label or arrow
+          let labelText = '';
+          if (_sfmScenario === 'increased_inflow') {
+            if (r === maxLeft.r && c === maxLeft.c && maxLeft.d > 0.4) labelText = 'SURGE ENTRY';
+            else if (r === maxMid.r && c === maxMid.c && maxMid.d > 0.6) labelText = 'HOTSPOT';
+            else if (r === maxRight.r && c === maxRight.c && maxRight.d > 0.3) labelText = 'OVERFLOW';
+          } else if (_sfmScenario === 'gate_closure') {
+            if (r === maxMid.r && c === maxMid.c && maxMid.d > 0.5) labelText = 'BOTTLENECK';
+          } else if (_sfmScenario === 'evacuation') {
+            if (r === maxRight.r && c === maxRight.c && maxRight.d > 0.3) labelText = 'OVERFLOW';
+          }
+
+          if (labelText) {
+            ctx.save();
+            ctx.font = 'bold 6.5px sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+            ctx.lineWidth = 2.5;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.strokeText(labelText, x + bw / 2, y + bh / 2);
+            ctx.fillText(labelText, x + bw / 2, y + bh / 2);
+            ctx.restore();
+          } else {
+            // Draw scenario-based flow arrow
+            const [avx, avy] = _scenarioFlowAt(c, r, GW, GH);
+            const cx2 = x + bw / 2;
+            const cy2 = y + bh / 2;
+            const angle = Math.atan2(avy, avx);
+            const arrowLen = Math.min(bw, bh) * 0.52;
+            const x1 = cx2 - Math.cos(angle) * arrowLen * 0.4;
+            const y1 = cy2 - Math.sin(angle) * arrowLen * 0.4;
+            const x2 = cx2 + Math.cos(angle) * arrowLen * 0.6;
+            const y2 = cy2 + Math.sin(angle) * arrowLen * 0.6;
+
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,255,255,0.82)';
+            ctx.lineWidth = 1.4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+
+            const hs = 3.5;
+            const ha = Math.PI / 5.5;
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - hs * Math.cos(angle - ha), y2 - hs * Math.sin(angle - ha));
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - hs * Math.cos(angle + ha), y2 - hs * Math.sin(angle + ha));
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+      }
+
+      // Thin wall lines
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 2;
+      const sx = cw / W, sy = ch / H;
+      for (const [wx1, wy1, wx2, wy2] of _sfmWalls) {
+        ctx.beginPath();
+        ctx.moveTo(wx1 * sx, wy1 * sy);
+        ctx.lineTo(wx2 * sx, wy2 * sy);
+        ctx.stroke();
+      }
+
+      // Gate/exit labels
+      if (_sfmScenario === 'gate_closure') {
+        const t2 = _sfmFrame * _SFM.DT;
+        const gateClosed = t2 >= 5.0;
+        ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
+        ctx.fillStyle = gateClosed ? '#ff2244' : '#00ff88';
+        ctx.fillText(gateClosed ? '🚪 GATE A CLOSED' : '🚪 GATE A OPEN', cw * 0.15, ch - 6);
+        ctx.fillStyle = '#00ff88';
+        ctx.fillText('🚪 GATE B OPEN', cw * 0.85, ch - 6);
+      }
+      if (_sfmScenario === 'evacuation') {
+        ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#00ff88';
+        ctx.fillText('🚨 EXIT 1', cw * 0.87, ch * 0.15);
+        ctx.fillText('🚨 EXIT 2', cw * 0.87, ch * 0.85);
+      }
+
+      // HUD box
+      const alive = _sfmAgents.filter(a => a.on).length;
+      const total = _sfmAgents.length;
+      const exited = total - alive;
+      const t = (_sfmFrame * _SFM.DT).toFixed(1);
+      ctx.fillStyle = 'rgba(0,0,0,0.75)';
+      ctx.fillRect(6, 6, 220, 82);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#ffdd00'; ctx.font = 'bold 11px monospace';
+      ctx.fillText(_sfmLabel, 12, 22);
+      ctx.fillStyle = '#aabbcc'; ctx.font = '10px monospace';
+      ctx.fillText(`Active agents : ${alive}`, 12, 38);
+      ctx.fillText(`Exited / Total: ${exited} / ${total}`, 12, 54);
+      ctx.fillText(`Bottlenecks   : ${bottlenecks.length}`, 12, 70);
+      ctx.fillText(`t = ${t}s`, 12, 84);
+
+      // Update live metrics strip
+      const activeFull = _sfmAgents.filter(a => a.on);
+      let speedSum = 0;
+      for (const ag of activeFull) speedSum += Math.sqrt(ag.v[0] ** 2 + ag.v[1] ** 2);
+      const avgSpd = activeFull.length ? (speedSum / activeFull.length).toFixed(2) : '0.00';
+      const throughput = Math.round(exited / Math.max(parseFloat(t), 0.1) * 60);
+      const spEl = document.getElementById('slm-speed');
+      const agEl = document.getElementById('slm-agents');
+      const dnEl = document.getElementById('slm-density');
+      const btEl = document.getElementById('slm-bottles');
+      const tpEl = document.getElementById('slm-throughput');
+      const tmEl = document.getElementById('slm-time');
+      if (spEl) { spEl.textContent = avgSpd; spEl.className = 'lm-value ' + (parseFloat(avgSpd) < 0.5 ? 'crit' : parseFloat(avgSpd) < 1.0 ? 'warn' : 'good'); }
+      if (agEl) agEl.textContent = alive;
+      if (dnEl) { const d = maxD.toFixed(1); dnEl.textContent = d; dnEl.className = 'lm-value ' + (maxD > 6 ? 'crit' : maxD > 4 ? 'bad' : maxD > 2 ? 'warn' : 'good'); }
+      if (btEl) { btEl.textContent = bottlenecks.length; btEl.className = 'lm-value ' + (bottlenecks.length > 2 ? 'crit' : bottlenecks.length > 0 ? 'warn' : 'good'); }
+      if (tpEl) tpEl.textContent = throughput;
+      if (tmEl) tmEl.textContent = `${t}s`;
+    }
+
+
+    function _sfmLoop() {
+      const canvas = document.getElementById('flow-canvas');
+      if (!canvas) return;
+      canvas.width = canvas.offsetWidth || canvas.parentElement.clientWidth - 32;
+      canvas.height = 380;
+      const t = _sfmFrame * _SFM.DT;
+
+      // Scenario-specific timed events
+      if (_sfmScenario === 'gate_closure') {
+        if (t >= 5.0 && _sfmWalls2) { _sfmWalls = _sfmWalls2; _sfmWalls2 = null; } // gate narrows
+        if (t >= 7.0 && _sfmWalls2 === null && !_sfmExtra) {
+          // Redirect remaining left-side agents to right gate
+          for (const ag of _sfmAgents)
+            if (ag.on && ag.p[0] < _SFM.W * 0.5)
+              ag.g = [_SFM.W - 1, _SFM.H / 2 + (Math.random() - 0.5) * 1.5];
+          _sfmExtra = true;
+        }
+      }
+      if (_sfmScenario === 'increased_inflow') {
+        if (t >= 4.0 && !_sfmExtra) {
+          _sfmAgents.push(..._makeAgents(45, [0.5, 3], [2, _SFM.H - 2], [_SFM.W - 2, _SFM.W - 1], [2, _SFM.H - 2]));
+          _sfmExtra = true;
+        }
+        if (t >= 8.0 && !_sfmExtraWave2) {
+          _sfmAgents.push(..._makeAgents(30, [0.5, 3], [2, _SFM.H - 2], [_SFM.W - 2, _SFM.W - 1], [2, _SFM.H - 2]));
+          _sfmExtraWave2 = true;
+        }
+      }
+      if (_sfmScenario === 'evacuation' && !_sfmExtra) { _sfmDesire = _SFM.DESIRE * 2.2; _sfmExtra = true; }
+
+      _sfmTick(); _sfmFrame++;
+      if (_sfmAgents.every(a => !a.on)) _sfmInit(_sfmScenario); // auto-reset
+      _sfmDraw();
+      _sfmRAF = requestAnimationFrame(_sfmLoop);
+    }
+
+    function _sfmInit(scenario) {
+      _sfmScenario = scenario; _sfmFrame = 0; _sfmExtra = false; _sfmExtraWave2 = false;
+      _sfmDesire = _SFM.DESIRE; _sfmWalls2 = null;
+      const H = _SFM.H, W = _SFM.W;
+
+      if (scenario === 'gate_closure') {
+        _sfmLabel = 'Gate-Closure Scenario';
+        // Two gates on right wall initially; left agents go to top gate, right to bottom
+        const gate1c = H * 0.3, gate2c = H * 0.75;
+        _sfmAgents = [
+          ..._makeAgents(30, [1, W * 0.4], [2, H * 0.5], [W - 0.8, W - 0.5], [gate1c - 1.5, gate1c + 1.5]),
+          ..._makeAgents(30, [1, W * 0.4], [H * 0.5, H - 2], [W - 0.8, W - 0.5], [gate2c - 1.5, gate2c + 1.5]),
+        ];
+        // Initial walls: two gates open
+        _sfmWalls = [
+          [0, 0, W, 0], [0, H, W, H], [0, 0, 0, H],
+          [W, 0, W, gate1c - 2.5], [W, gate1c + 2.5, W, gate2c - 2.5], [W, gate2c + 2.5, W, H],
+        ];
+        // After gate closure: only bottom gate remains open (narrower)
+        _sfmWalls2 = [
+          [0, 0, W, 0], [0, H, W, H], [0, 0, 0, H],
+          [W, 0, W, gate2c - 1.5], [W, gate2c + 1.5, W, H],
+        ];
+
+      } else if (scenario === 'increased_inflow') {
+        _sfmLabel = 'Inflow-Surge Scenario';
+        const gc = H / 2;
+        _sfmAgents = _makeAgents(40, [0.5, 6], [2, H - 2], [W - 1.5, W - 0.5], [gc - 3.5, gc + 3.5]);
+        _sfmWalls = [
+          [0, 0, W, 0], [0, H, W, H], [0, 0, 0, H],
+          // Central corridor barrier — creates a narrow walkway
+          [W * 0.3, 0, W * 0.3, H * 0.38], [W * 0.3, H * 0.62, W * 0.3, H],
+          [W, 0, W, gc - 3.5], [W, gc + 3.5, W, H],
+        ];
+
+      } else { // evacuation
+        _sfmLabel = 'Emergency Evacuation';
+        // Two exits: top-right and bottom-right
+        const ex1y = H * 0.18, ex2y = H * 0.82;
+        _sfmAgents = [
+          ..._makeAgents(50, [5, W - 5], [5, H * 0.5], [W - 0.8, W - 0.5], [ex1y - 1, ex1y + 1]),
+          ..._makeAgents(30, [5, W - 5], [H * 0.5, H - 5], [W - 0.8, W - 0.5], [ex2y - 1, ex2y + 1]),
+        ];
+        _sfmWalls = [
+          [0, 0, W, 0], [0, H, W, H], [0, 0, 0, H],
+          [W, 0, W, ex1y - 2.0], [W, ex1y + 2.0, W, ex2y - 2.0], [W, ex2y + 2.0, W, H],
+        ];
+      }
+    }
+
+    function startSFM(scenario) {
+      if (_sfmRAF) { cancelAnimationFrame(_sfmRAF); _sfmRAF = null; }
+      _sfmInit(scenario);
+      _sfmLoop();
+    }
+
+    function drawFlowCanvas(zones) { /* SFM replaces this */ }
+
+    // ── FOUR-ZONE LIVE DOT DIGITAL TWIN ──────────────────────────────────────────
+    let dtAnimationFrame = null;
+    const dtState = {};
+
+    function ensureDigitalTwinGrid() {
+      const grid = document.getElementById('dt-zone-grid');
+      if (!grid || grid.dataset.ready === '1') return;
+      grid.innerHTML = STATIC_ZONES.map((zone, index) => {
+        const zid = zone.replace(/\s+/g, '-');
+        const id = `Z${String(index + 1).padStart(2, '0')}`;
+        dtState[zone] = { dots: [], targetDots: [], lastCount: 0, lastSpeed: 0, status: 'WAITING' };
+        return `
       <div class="dt-zone-card">
         <div class="dt-zone-head">
           <div class="dt-zone-name">${zone} <span class="dt-zone-meta">${id}</span></div>
@@ -1394,172 +2683,283 @@ function ensureDigitalTwinGrid() {
         </div>
         <canvas class="dt-zone-canvas" id="dt-canvas-${zid}"></canvas>
       </div>`;
-  }).join('');
-  grid.dataset.ready = '1';
-}
+      }).join('');
+      grid.dataset.ready = '1';
+    }
 
-function updateDigitalTwinZone(zone, data) {
-  ensureDigitalTwinGrid();
-  if (!dtState[zone]) return;
-  const incoming = Array.isArray(data.positions) ? data.positions : [];
-  const current = dtState[zone];
-  current.lastCount = typeof data.current_count === 'number' ? data.current_count : current.lastCount;
-  current.lastSpeed = typeof data.avg_speed === 'number' ? data.avg_speed : current.lastSpeed;
-  current.status = data.status === 'warming_up' ? 'WARMUP' : (data.predicted_risk_level || 'LIVE');
-  current.targetDots = incoming.map((p, i) => ({
-    id: p.id ?? i,
-    x: Math.max(0.02, Math.min(0.98, Number(p.x) || 0.5)),
-    y: Math.max(0.02, Math.min(0.98, Number(p.y) || 0.5)),
-  }));
+    function updateDigitalTwinZone(zone, data) {
+      ensureDigitalTwinGrid();
+      if (!dtState[zone]) return;
+      const incoming = Array.isArray(data.positions) ? data.positions : [];
+      const current = dtState[zone];
+      current.lastCount = typeof data.current_count === 'number' ? data.current_count : current.lastCount;
+      current.lastSpeed = typeof data.avg_speed === 'number' ? data.avg_speed : current.lastSpeed;
+      current.status = data.status === 'warming_up' ? 'WARMUP' : (data.predicted_risk_level || 'LIVE');
+      current.targetDots = incoming.map((p, i) => ({
+        id: p.id ?? i,
+        x: Math.max(0.02, Math.min(0.98, Number(p.x) || 0.5)),
+        y: Math.max(0.02, Math.min(0.98, Number(p.y) || 0.5)),
+      }));
 
-  if (!current.targetDots.length && current.lastCount > 0) {
-    const n = Math.min(80, Math.max(1, Math.round(current.lastCount)));
-    while (current.targetDots.length < n) {
-      current.targetDots.push({
-        id: current.targetDots.length,
-        x: 0.12 + Math.random() * 0.76,
-        y: 0.12 + Math.random() * 0.76,
+      if (!current.targetDots.length && current.lastCount > 0) {
+        const n = Math.min(80, Math.max(1, Math.round(current.lastCount)));
+        while (current.targetDots.length < n) {
+          current.targetDots.push({
+            id: current.targetDots.length,
+            x: 0.12 + Math.random() * 0.76,
+            y: 0.12 + Math.random() * 0.76,
+          });
+        }
+      }
+
+      const byId = new Map(current.dots.map(d => [d.id, d]));
+      current.dots = current.targetDots.map(t => {
+        const existing = byId.get(t.id);
+        if (existing) {
+          existing.tx = t.x;
+          existing.ty = t.y;
+          return existing;
+        }
+        return {
+          id: t.id,
+          x: t.x,
+          y: t.y,
+          tx: t.x,
+          ty: t.y,
+          vx: (Math.random() - 0.5) * 0.002,
+          vy: (Math.random() - 0.5) * 0.002,
+        };
       });
-    }
-  }
 
-  const byId = new Map(current.dots.map(d => [d.id, d]));
-  current.dots = current.targetDots.map(t => {
-    const existing = byId.get(t.id);
-    if (existing) {
-      existing.tx = t.x;
-      existing.ty = t.y;
-      return existing;
-    }
-    return {
-      id: t.id,
-      x: t.x,
-      y: t.y,
-      tx: t.x,
-      ty: t.y,
-      vx: (Math.random() - 0.5) * 0.002,
-      vy: (Math.random() - 0.5) * 0.002,
-    };
-  });
-
-  const zid = zone.replace(/\s+/g, '-');
-  const meta = document.getElementById(`dt-meta-${zid}`);
-  if (meta) meta.textContent = `${Math.round(current.lastCount)} people · ${current.lastSpeed.toFixed(2)} m/s · ${current.status}`;
-  const badge = document.getElementById('vt-status-badge');
-  if (badge) badge.textContent = Object.values(dtState).some(s => s.dots.length) ? 'LIVE' : 'WAITING';
-}
-
-function drawDigitalTwinGrid() {
-  ensureDigitalTwinGrid();
-  STATIC_ZONES.forEach(zone => {
-    const zid = zone.replace(/\s+/g, '-');
-    const canvas = document.getElementById(`dt-canvas-${zid}`);
-    const state = dtState[zone];
-    if (!canvas || !state) return;
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const w = Math.max(240, Math.round(rect.width));
-    const h = Math.max(220, Math.round(rect.height));
-    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
-      canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
-    }
-    const ctx = canvas.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#050b12';
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.strokeStyle = 'rgba(0,212,255,0.08)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x <= w; x += w / 10) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-    }
-    for (let y = 0; y <= h; y += h / 8) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      const zid = zone.replace(/\s+/g, '-');
+      const meta = document.getElementById(`dt-meta-${zid}`);
+      if (meta) meta.textContent = `${Math.round(current.lastCount)} people · ${current.lastSpeed.toFixed(2)} m/s · ${current.status}`;
+      const badge = document.getElementById('vt-status-badge');
+      if (badge) badge.textContent = Object.values(dtState).some(s => s.dots.length) ? 'LIVE' : 'WAITING';
     }
 
-    state.dots.forEach(dot => {
-      const speedFactor = Math.max(0.03, Math.min(0.22, 0.05 + state.lastSpeed * 0.08));
-      dot.x += (dot.tx - dot.x) * speedFactor + dot.vx;
-      dot.y += (dot.ty - dot.y) * speedFactor + dot.vy;
-      if (Math.abs(dot.tx - dot.x) < 0.01) dot.vx += (Math.random() - 0.5) * 0.0008;
-      if (Math.abs(dot.ty - dot.y) < 0.01) dot.vy += (Math.random() - 0.5) * 0.0008;
-      dot.vx *= 0.96;
-      dot.vy *= 0.96;
-      dot.x = Math.max(0.02, Math.min(0.98, dot.x));
-      dot.y = Math.max(0.02, Math.min(0.98, dot.y));
+    function drawDigitalTwinGrid() {
+      ensureDigitalTwinGrid();
+      STATIC_ZONES.forEach(zone => {
+        const zid = zone.replace(/\s+/g, '-');
+        const canvas = document.getElementById(`dt-canvas-${zid}`);
+        const state = dtState[zone];
+        if (!canvas || !state) return;
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const w = Math.max(240, Math.round(rect.width));
+        const h = Math.max(220, Math.round(rect.height));
+        if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+          canvas.width = Math.round(w * dpr);
+          canvas.height = Math.round(h * dpr);
+        }
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#050b12';
+        ctx.fillRect(0, 0, w, h);
 
-      const px = dot.x * w;
-      const py = dot.y * h;
-      ctx.beginPath();
-      ctx.arc(px, py, 3.3, 0, Math.PI * 2);
-      ctx.fillStyle = state.status === 'WARMUP' ? '#ffcc00' : '#00d4ff';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-      ctx.stroke();
-    });
+        ctx.strokeStyle = 'rgba(0,212,255,0.08)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x <= w; x += w / 10) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+        }
+        for (let y = 0; y <= h; y += h / 8) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+        }
 
-    if (!state.dots.length) {
-      ctx.fillStyle = 'rgba(154,178,198,0.55)';
-      ctx.font = '12px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('Waiting for this zone prediction stream', w / 2, h / 2);
+        state.dots.forEach(dot => {
+          const speedFactor = Math.max(0.03, Math.min(0.22, 0.05 + state.lastSpeed * 0.08));
+          dot.x += (dot.tx - dot.x) * speedFactor + dot.vx;
+          dot.y += (dot.ty - dot.y) * speedFactor + dot.vy;
+          if (Math.abs(dot.tx - dot.x) < 0.01) dot.vx += (Math.random() - 0.5) * 0.0008;
+          if (Math.abs(dot.ty - dot.y) < 0.01) dot.vy += (Math.random() - 0.5) * 0.0008;
+          dot.vx *= 0.96;
+          dot.vy *= 0.96;
+          dot.x = Math.max(0.02, Math.min(0.98, dot.x));
+          dot.y = Math.max(0.02, Math.min(0.98, dot.y));
+
+          const px = dot.x * w;
+          const py = dot.y * h;
+          ctx.beginPath();
+          ctx.arc(px, py, 3.3, 0, Math.PI * 2);
+          ctx.fillStyle = state.status === 'WARMUP' ? '#ffcc00' : '#00d4ff';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+          ctx.stroke();
+        });
+
+        if (!state.dots.length) {
+          ctx.fillStyle = 'rgba(154,178,198,0.55)';
+          ctx.font = '12px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('Waiting for this zone prediction stream', w / 2, h / 2);
+        }
+      });
+      dtAnimationFrame = requestAnimationFrame(drawDigitalTwinGrid);
     }
-  });
-  dtAnimationFrame = requestAnimationFrame(drawDigitalTwinGrid);
-}
 
-function startDigitalTwinGrid() {
-  ensureDigitalTwinGrid();
-  if (!dtAnimationFrame) drawDigitalTwinGrid();
-}
+    function startDigitalTwinGrid() {
+      ensureDigitalTwinGrid();
+      if (!dtAnimationFrame) drawDigitalTwinGrid();
+    }
 
-// ── TEST LIVE — RTSP ──────────────────────────────────────────────────────────
-function testLive() {
-  const zone = document.getElementById('live-zone-select').value;
+    // ── TEST LIVE — RTSP ──────────────────────────────────────────────────────────
+    function testLive() {
+      const zone = document.getElementById('live-zone-select').value;
 
-  // Close any previous live stream on a different zone first
-  if (liveZone && liveZone !== zone && eventSources[liveZone]) {
-    eventSources[liveZone].close();
-    delete eventSources[liveZone];
-    const oldZid = liveZone.replace(/\s+/g, '-');
-    const ob = document.getElementById(`badge-${oldZid}`);
-    if (ob) { ob.textContent = 'OFFLINE'; ob.style.background = 'rgba(90,138,170,0.15)'; ob.style.color = 'var(--text-dim)'; }
-  }
+      // Close any previous live stream on a different zone first
+      if (liveZone && liveZone !== zone && eventSources[liveZone]) {
+        eventSources[liveZone].close();
+        delete eventSources[liveZone];
+        const oldZid = liveZone.replace(/\s+/g, '-');
+        const ob = document.getElementById(`badge-${oldZid}`);
+        if (ob) { ob.textContent = 'OFFLINE'; ob.style.background = 'rgba(90,138,170,0.15)'; ob.style.color = 'var(--text-dim)'; }
+      }
 
-  liveZone = zone;
-  document.getElementById('live-start-btn').style.display = 'none';
-  document.getElementById('live-stop-btn').style.display = 'inline-flex';
-  document.getElementById('live-status-text').textContent = `Connecting → ${zone} (RTSP)…`;
+      liveZone = zone;
+      document.getElementById('live-start-btn').style.display = 'none';
+      document.getElementById('live-stop-btn').style.display = 'inline-flex';
+      document.getElementById('live-status-text').textContent = `Connecting → ${zone} (RTSP)…`;
 
-  // Reuse the exact same pipeline endpoint — only the source URL differs
-  openZoneStream(zone, null, 'http://127.0.0.1:8000/api/v1/analytics/live');
+      // Reuse the exact same pipeline endpoint — only the source URL differs
+      openZoneStream(zone, null, 'http://127.0.0.1:8000/api/v1/analytics/live');
 
-  document.getElementById('live-status-text').textContent = `Live — ${zone} (warming up 6s…)`;
-}
+      document.getElementById('live-status-text').textContent = `Live — ${zone} (warming up 6s…)`;
+    }
 
-function stopLive() {
-  if (liveZone && eventSources[liveZone]) {
-    eventSources[liveZone].close();
-    delete eventSources[liveZone];
-  }
-  const prevZone = liveZone;
-  liveZone = null;
-  document.getElementById('live-start-btn').style.display = 'inline-flex';
-  document.getElementById('live-stop-btn').style.display = 'none';
-  document.getElementById('live-status-text').textContent = 'RTSP camera ready';
-  if (prevZone) {
-    const zid = prevZone.replace(/\s+/g, '-');
-    const b = document.getElementById(`badge-${zid}`);
-    const c = document.getElementById(`card-${zid}`);
-    if (b) { b.textContent = 'OFFLINE'; b.style.background = 'rgba(90,138,170,0.15)'; b.style.color = 'var(--text-dim)'; }
-    if (c) c.style.borderColor = 'var(--border)';
-  }
-}
+    function stopLive() {
+      if (liveZone && eventSources[liveZone]) {
+        eventSources[liveZone].close();
+        delete eventSources[liveZone];
+      }
+      const prevZone = liveZone;
+      liveZone = null;
+      document.getElementById('live-start-btn').style.display = 'inline-flex';
+      document.getElementById('live-stop-btn').style.display = 'none';
+      document.getElementById('live-status-text').textContent = 'RTSP camera ready';
+      if (prevZone) {
+        const zid = prevZone.replace(/\s+/g, '-');
+        const b = document.getElementById(`badge-${zid}`);
+        const c = document.getElementById(`card-${zid}`);
+        if (b) { b.textContent = 'OFFLINE'; b.style.background = 'rgba(90,138,170,0.15)'; b.style.color = 'var(--text-dim)'; }
+        if (c) c.style.borderColor = 'var(--border)';
+      }
+    }
 
+    // ── VID-TWIN — File select, upload, poll, stop ────────────────────────────
+    function vtOnVideoSelect(input) {
+      const f = input.files[0];
+      document.getElementById('vt-filename').textContent = f ? f.name : 'No file selected';
+      document.getElementById('vt-start-btn').disabled = !f;
+    }
 
+    async function vtUpload() {
+      const input = document.getElementById('vt-video-input');
+      if (!input.files[0]) return;
 
-</script> 
-</body> 
-</html>  
+      const badge = document.getElementById('vt-status-badge');
+      const startB = document.getElementById('vt-start-btn');
+      const stopB = document.getElementById('vt-stop-btn');
+
+      badge.textContent = 'UPLOADING';
+      badge.style.color = 'var(--yellow)';
+      startB.disabled = true;
+
+      const fd = new FormData();
+      fd.append('video', input.files[0]);
+      try {
+        const res = await fetch('/api/vid-twin/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+        badge.textContent = 'LOADING MODEL';
+        badge.style.color = 'var(--yellow)';
+        startB.style.display = 'none';
+        stopB.style.display = 'inline-flex';
+
+        // Start polling for status and stream frames
+        vtPollInterval = setInterval(vtPollStatus, 2000);
+        vtPollStatus(); // immediate first poll
+      } catch (e) {
+        badge.textContent = 'ERROR';
+        badge.style.color = 'var(--critical)';
+        startB.disabled = false;
+        console.error('[VT] upload error', e);
+      }
+    }
+
+    async function vtPollStatus() {
+      try {
+        const res = await fetch('/api/vid-twin/status');
+        const data = await res.json();
+        const badge = document.getElementById('vt-status-badge');
+        const strip = document.getElementById('vt-stats-strip');
+
+        if (data.status === 'running') {
+          badge.textContent = '● LIVE';
+          badge.style.color = 'var(--green)';
+          badge.style.background = 'rgba(0,255,136,0.15)';
+          badge.style.border = '1px solid rgba(0,255,136,0.3)';
+
+          // Show stream images (MJPEG via proxy)
+          ['video', 'dot', 'zone', 'graph'].forEach(kind => {
+            const img = document.getElementById(`vt-${kind}-img`);
+            const phld = document.getElementById(`vt-${kind}-placeholder`);
+            if (img && phld) {
+              if (!img.src || img.src === window.location.href) {
+                img.src = `/api/vid-twin/stream/${kind}`;
+              }
+              img.style.display = 'block';
+              phld.style.display = 'none';
+            }
+          });
+
+          // Stats strip
+          strip.style.display = 'flex';
+          document.getElementById('vt-count').textContent = data.total_count ?? '—';
+          document.getElementById('vt-frame').textContent = data.frame_id ?? '—';
+          document.getElementById('vt-status-txt').textContent = data.status ?? '—';
+        } else if (data.status === 'stopped' || data.status === 'error') {
+          clearInterval(vtPollInterval);
+          vtPollInterval = null;
+          badge.textContent = data.status === 'error' ? 'ERROR' : 'DONE';
+          badge.style.color = data.status === 'error' ? 'var(--critical)' : 'var(--text-dim)';
+        } else {
+          // loading / idle — keep polling
+          badge.textContent = data.status ? data.status.toUpperCase() : 'LOADING';
+          badge.style.color = 'var(--yellow)';
+        }
+      } catch (_) { /* network blip — keep polling */ }
+    }
+
+    async function vtStop() {
+      clearInterval(vtPollInterval);
+      vtPollInterval = null;
+
+      try { await fetch('/api/vid-twin/stop', { method: 'POST' }); } catch (_) { }
+
+      // Reset stream imgs to placeholder
+      ['video', 'dot', 'zone', 'graph'].forEach(kind => {
+        const img = document.getElementById(`vt-${kind}-img`);
+        const phld = document.getElementById(`vt-${kind}-placeholder`);
+        if (img) { img.src = ''; img.style.display = 'none'; }
+        if (phld) phld.style.display = 'flex';
+      });
+
+      const badge = document.getElementById('vt-status-badge');
+      badge.textContent = 'IDLE';
+      badge.style.color = 'var(--text-dim)';
+      badge.style.background = 'rgba(90,138,170,0.15)';
+      badge.style.border = '1px solid var(--border2)';
+
+      document.getElementById('vt-stats-strip').style.display = 'none';
+      document.getElementById('vt-stop-btn').style.display = 'none';
+      document.getElementById('vt-start-btn').style.display = 'inline-flex';
+      document.getElementById('vt-start-btn').disabled = !document.getElementById('vt-video-input').files[0];
+    }
+
+  </script>
+</body>
+
+</html>
