@@ -1333,25 +1333,25 @@
             </div>
             <div class="panel-body">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="risk-classes">
-                <div
+                <div id="risk-box-safe"
                   style="padding:10px;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.2);border-radius:6px;text-align:center">
                   <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--safe)">SAFE</div>
                   <div style="font-size:1.5rem;font-weight:800;color:var(--safe)" id="rc-safe">0</div>
                   <div style="font-size:0.7rem;color:var(--text-dim)">zones</div>
                 </div>
-                <div
+                <div id="risk-box-moderate"
                   style="padding:10px;background:rgba(255,204,0,0.07);border:1px solid rgba(255,204,0,0.2);border-radius:6px;text-align:center">
                   <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--moderate)">MODERATE</div>
                   <div style="font-size:1.5rem;font-weight:800;color:var(--moderate)" id="rc-moderate">0</div>
                   <div style="font-size:0.7rem;color:var(--text-dim)">zones</div>
                 </div>
-                <div
+                <div id="risk-box-high"
                   style="padding:10px;background:rgba(255,119,0,0.07);border:1px solid rgba(255,119,0,0.2);border-radius:6px;text-align:center">
                   <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--high)">HIGH</div>
                   <div style="font-size:1.5rem;font-weight:800;color:var(--high)" id="rc-high">0</div>
                   <div style="font-size:0.7rem;color:var(--text-dim)">zones</div>
                 </div>
-                <div
+                <div id="risk-box-critical"
                   style="padding:10px;background:rgba(255,34,68,0.07);border:1px solid rgba(255,34,68,0.2);border-radius:6px;text-align:center">
                   <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--critical)">CRITICAL</div>
                   <div style="font-size:1.5rem;font-weight:800;color:var(--critical)" id="rc-critical">0</div>
@@ -1408,7 +1408,7 @@
       </div>
 
       <!-- Scenario zone-score results strip -->
-      <div class="sim-result">
+      <div class="sim-result" style="display:none">
         <div class="sim-result-title" id="sim-result-title">SELECT A SCENARIO TO RUN SIMULATION</div>
         <div id="sim-zone-grid"></div>
       </div>
@@ -1607,18 +1607,6 @@
             <div class="panel-body" id="alerts-full-list"></div>
           </div>
         </div>
-        <div>
-          <div class="panel">
-            <div class="panel-header">
-              <div class="panel-title">
-                <div class="panel-title-dot" style="background:var(--green)"></div>Quick Actions
-              </div>
-            </div>
-            <div class="panel-body">
-              <div id="quick-actions-list"></div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -1634,6 +1622,50 @@
     let latestZoneData = {};
     let vtPollInterval = null;
     let liveZone = null;  // which zone card the RTSP stream is currently targeting
+
+    function normalizeRisk(risk) {
+      const value = String(risk || 'Safe').toLowerCase();
+      if (value.includes('critical')) return 'Critical';
+      if (value.includes('high')) return 'High';
+      if (value.includes('warn') || value.includes('moderate')) return 'Moderate';
+      return 'Safe';
+    }
+
+    function getRiskColor(risk) {
+      const normalized = normalizeRisk(risk);
+      const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
+      return riskColors[normalized] || 'var(--accent)';
+    }
+
+    function applyRiskStylingToZone(zone, risk) {
+      const zid = zone.replace(/\s+/g, '-');
+      const color = getRiskColor(risk);
+      const card = document.getElementById(`card-${zid}`);
+      const badge = document.getElementById(`badge-${zid}`);
+      const foreRisk = document.getElementById(`fore-risk-${zid}`);
+      const confVal = document.getElementById(`conf-val-${zid}`);
+      const confBar = document.getElementById(`conf-bar-${zid}`);
+      const currentCount = document.getElementById(`curr-count-${zid}`);
+      const density = document.getElementById(`curr-density-${zid}`);
+      const speed = document.getElementById(`curr-speed-${zid}`);
+      const stag = document.getElementById(`fore-stag-${zid}`);
+      if (card) card.style.borderColor = color;
+      if (badge) {
+        badge.style.background = `${color}22`;
+        badge.style.color = color;
+      }
+      [currentCount, density, speed, stag, foreRisk, confVal].forEach(el => {
+        if (el) el.style.color = color;
+      });
+      if (confBar) confBar.style.backgroundColor = color;
+      if (foreRisk) foreRisk.textContent = normalizeRisk(risk).toUpperCase();
+    }
+
+    function refreshPredictionView() {
+      if (document.getElementById('page-predictions')?.classList.contains('active')) {
+        loadPredictions();
+      }
+    }
 
     // Build per-zone upload cards and zone matrix cards on page load
     function initializeMatrixGrid() {
@@ -1787,9 +1819,16 @@
         }
         if (typeof data.confidence_score === 'number') {
           const pct = Math.round(data.confidence_score * 100);
-          document.getElementById(`conf-val-${zid}`).textContent = `${pct}%`;
-          document.getElementById(`conf-bar-${zid}`).style.width = `${pct}%`;
-          document.getElementById(`conf-bar-${zid}`).style.backgroundColor = color;
+          const confVal = document.getElementById(`conf-val-${zid}`);
+          const confBar = document.getElementById(`conf-bar-${zid}`);
+          if (confVal) {
+            confVal.textContent = `${pct}%`;
+            confVal.style.color = color;
+          }
+          if (confBar) {
+            confBar.style.width = `${pct}%`;
+            confBar.style.backgroundColor = color;
+          }
         }
       }
 
@@ -1825,18 +1864,14 @@
         latestZoneData[zone] = data;
         updateDigitalTwinZone(zone, data);
 
-        const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
-        const col = riskColors[data.predicted_risk_level] || 'var(--accent)';
+        const col = getRiskColor(data.predicted_risk_level);
 
         document.getElementById(`badge-${zid}`).textContent = '● LIVE';
-        document.getElementById(`badge-${zid}`).style.background = 'rgba(0,255,136,0.15)';
-        document.getElementById(`badge-${zid}`).style.color = '#00ff88';
         const _st = document.getElementById(`upload-state-${zid}`);
         if (_st) _st.textContent = 'STREAMING';
-        document.getElementById(`card-${zid}`).style.borderColor = col;
+        applyRiskStylingToZone(zone, data.predicted_risk_level);
         updateZoneTile(data, col);
-        document.getElementById(`fore-risk-${zid}`).textContent = data.predicted_risk_level.toUpperCase();
-        document.getElementById(`fore-risk-${zid}`).style.color = col;
+        refreshPredictionView();
       };
 
       es.onerror = function () {
@@ -1896,18 +1931,17 @@
 
     // ── PREDICTIONS TAB ───────────────────────────────────────────────────────────
     function loadPredictions() {
-      const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
       const counts = { Safe: 0, Moderate: 0, High: 0, Critical: 0 };
       const rows = document.getElementById('pred-rows');
       rows.innerHTML = '';
 
       STATIC_ZONES.forEach(zone => {
         const d = latestZoneData[zone];
-        const risk = d ? d.predicted_risk_level : 'Safe';
+        const risk = normalizeRisk(d ? d.predicted_risk_level : 'Safe');
         const score = d ? Math.round(d.confidence_score * 100) : 0;
         const count = d ? Math.round(d.current_count) : 0;
         counts[risk] = (counts[risk] || 0) + 1;
-        const col = riskColors[risk] || '#00ff88';
+        const col = getRiskColor(risk);
         rows.innerHTML += `
       <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
         <div style="width:100px;font-weight:600;color:var(--text-bright)">${zone}</div>
@@ -1919,10 +1953,25 @@
       </div>`;
       });
 
-      document.getElementById('rc-safe').textContent = counts.Safe || 0;
-      document.getElementById('rc-moderate').textContent = counts.Moderate || 0;
-      document.getElementById('rc-high').textContent = counts.High || 0;
-      document.getElementById('rc-critical').textContent = counts.Critical || 0;
+      const riskBoxStyles = {
+        Safe: { bg: 'rgba(0,255,136,0.07)', border: 'rgba(0,255,136,0.2)', color: 'var(--safe)' },
+        Moderate: { bg: 'rgba(255,204,0,0.07)', border: 'rgba(255,204,0,0.2)', color: 'var(--moderate)' },
+        High: { bg: 'rgba(255,119,0,0.07)', border: 'rgba(255,119,0,0.2)', color: 'var(--high)' },
+        Critical: { bg: 'rgba(255,34,68,0.07)', border: 'rgba(255,34,68,0.2)', color: 'var(--critical)' },
+      };
+      ['Safe', 'Moderate', 'High', 'Critical'].forEach(level => {
+        const box = document.getElementById(`risk-box-${level.toLowerCase()}`);
+        const valueEl = document.getElementById(`rc-${level.toLowerCase()}`);
+        const labelEl = valueEl ? valueEl.previousElementSibling : null;
+        const style = riskBoxStyles[level];
+        if (box) {
+          box.style.background = style.bg;
+          box.style.borderColor = style.border;
+        }
+        if (valueEl) valueEl.style.color = style.color;
+        if (labelEl) labelEl.style.color = style.color;
+        if (valueEl) valueEl.textContent = counts[level] || 0;
+      });
 
       // Draw donut chart
       const canvas = document.getElementById('risk-donut');
@@ -1968,9 +2017,7 @@
         Moderate: 'Keep watch — prepare contingency staff',
       };
       const list = document.getElementById('alerts-full-list');
-      const quick = document.getElementById('quick-actions-list');
       list.innerHTML = '';
-      quick.innerHTML = '';
       let hasAlerts = false;
 
       STATIC_ZONES.forEach(zone => {
@@ -1990,15 +2037,10 @@
         <div style="font-size:0.85rem;margin-bottom:6px">${risk} risk — ${Math.round(d.current_count)} people, speed ${d.avg_speed.toFixed(2)} m/s, stagnation ${Math.round(d.stagnation * 100)}%</div>
         <div style="font-family:var(--font-mono);font-size:0.7rem;color:${col}">⚡ ${actions[risk] || ''}</div>
       </div>`;
-        quick.innerHTML += `
-      <div style="padding:8px 12px;margin-bottom:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border2);border-radius:4px;font-size:0.82rem">
-        <span style="color:${col};font-weight:600">${zone}:</span> ${actions[risk] || ''}
-      </div>`;
       });
 
       if (!hasAlerts) {
         list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim);font-family:var(--font-mono)">✅ No active alerts — all zones within safe parameters</div>';
-        quick.innerHTML = '<div style="color:var(--text-dim);font-size:0.82rem;padding:10px">No actions required at this time.</div>';
       }
     }
 
@@ -2147,9 +2189,9 @@
       document.getElementById('sim-recommendations').innerHTML =
         '<div style="color:var(--text-dim);font-family:var(--font-mono);font-size:0.8rem;text-align:center;padding:30px 0">Simulation running — analysis will appear here…</div>';
 
-      // Show live metrics strip
+      // Keep the live metrics strip hidden so only recommendations remain visible
       const metricsStrip = document.getElementById('sim-live-metrics');
-      metricsStrip.style.display = 'block';
+      metricsStrip.style.display = 'none';
 
       // Start SFM animation
       startSFM(scenario);
@@ -2166,8 +2208,7 @@
       const riskColors = { Safe: '#00ff88', Moderate: '#ffcc00', High: '#ff7700', Critical: '#ff2244' };
 
       // Zone score strip
-      document.getElementById('sim-result-title').textContent =
-        `SCENARIO: ${scenario.toUpperCase().replace(/_/g, ' ')} — RESULTS`;
+      document.getElementById('sim-result-title').textContent = '';
       const grid = document.getElementById('sim-zone-grid');
       grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px';
       grid.innerHTML = data.zones.map(z => {
@@ -2190,9 +2231,9 @@
       pill.textContent = `RISK: ${data.riskLevel.toUpperCase()}`;
       pill.style.cssText = `display:inline-block;font-family:var(--font-mono);font-size:0.65rem;padding:3px 12px;border-radius:12px;font-weight:700;background:${pillCol}22;color:${pillCol};border:1px solid ${pillCol}66`;
 
-      // Intelligent Analysis Metrics grid
+      // Hide the summary metrics panel so only the recommendations list remains visible
       const metricsEl = document.getElementById('sim-analysis-metrics');
-      metricsEl.style.display = 'block';
+      metricsEl.style.display = 'none';
       const m = data.metrics;
       const metricItems = Object.entries(m).map(([k, v]) => {
         const labels = {
